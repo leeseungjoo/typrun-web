@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
 import MainPage from './pages/MainPage';
 import LeaguePage from './pages/LeaguePage';
@@ -20,7 +21,9 @@ import SceneBackground from './components/SceneBackground';
 
 export default function App() {
   return (
-    <AuthProvider>
+    // reducedMotion="user" — OS '동작 줄이기' 설정 시 모든 framer-motion 연출 자동 감속(a11y).
+    <MotionConfig reducedMotion="user">
+      <AuthProvider>
       {/* 세션 테마 배경 — 모든 페이지에 연속 적용 (배경 고정 + 캐릭터 둥실) */}
       <SceneBackground />
       {/* 공용 상단 바 — 로그인/초대(좌) · 홈(우), 주요 네비 페이지 고정 */}
@@ -43,6 +46,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </MotionConfig>
   );
 }
