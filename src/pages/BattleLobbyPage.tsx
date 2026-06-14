@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { BattleSocket, type SocketState } from '../lib/battleSocket';
 import { needForMode, type Mode, type PlayerInfo } from '../lib/battleProtocol';
+import BattleGame from '../components/battle/BattleGame';
 
 interface MatchInfo {
   matchId: string;
@@ -67,6 +68,7 @@ export default function BattleLobbyPage() {
           );
           break;
         case 'match:found':
+          if (matchedRef.current) break; // 이미 매칭됨 — 늦은 재전송이 진행 중 매치를 덮어쓰지 않게.
           matchedRef.current = true;
           setMatch({
             matchId: msg.matchId,
@@ -83,6 +85,7 @@ export default function BattleLobbyPage() {
           setStarted(true);
           break;
         case 'error':
+          if (matchedRef.current) break; // 게임 진입 후엔 로비 에러 배너로 오염시키지 않음.
           setErr(msg.message || '오류가 발생했어요.');
           break;
         default:
@@ -193,7 +196,18 @@ export default function BattleLobbyPage() {
         </p>
       )}
 
-      {!match ? (
+      {started && match && sockRef.current ? (
+        <BattleGame
+          socket={sockRef.current}
+          matchId={match.matchId}
+          matchSeed={match.matchSeed}
+          categorySeq={categorySeq}
+          players={match.players}
+          you={match.you}
+          running={started}
+          onExit={() => nav(`/league/${categorySeq}`)}
+        />
+      ) : !match ? (
         <QueuePanel conn={conn} have={waiting?.have ?? 1} need={need} />
       ) : (
         <MatchPanel match={match} started={started} countdownSec={countdownSec} />

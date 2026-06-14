@@ -24,7 +24,8 @@ export function spawnRng(matchSeed: number, spawnIndex: number): () => number {
   return mulberry32((matchSeed ^ Math.imul(spawnIndex + 1, 0x9e3779b1)) >>> 0);
 }
 
-/** 시드 고정 Fisher–Yates 셔플 — 단어 풀을 모든 클라가 동일 순서로 섞을 때 사용. */
+// 시드 고정 Fisher–Yates 셔플 — 모든 클라가 동일 순서로 섞을 때.
+// 현재 풀 정규화는 battleSpawn.canonicalPool(seq 정렬)이 담당하므로 미사용. 향후 아이템 풀 셔플용으로 보존.
 export function seededShuffle<T>(items: readonly T[], seed: number): T[] {
   const arr = items.slice();
   const rng = mulberry32(seed >>> 0);

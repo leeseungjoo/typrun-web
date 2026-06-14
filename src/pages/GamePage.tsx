@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
 import { sound } from '../lib/sound';
+import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import type { Word, Category } from '../api/types';
 
@@ -435,10 +436,9 @@ export default function GamePage() {
     }
 
     const nextCombo = comboRef.current + 1;
-    const mul = nextCombo * tierFactor(nextCombo);
     const boosterOn = effectsRef.current.some((e) => e.effect === 'booster');
     const boosterMul = boosterOn ? BOOSTER_MULTIPLIER : 1;
-    const gain = Math.round(baseScore(hit.word.word.length) * mul * boosterMul);
+    const gain = clearScore(hit.word.word.length, nextCombo, boosterMul);
 
     setActive((prev) => prev.filter((a) => a.id !== hit.id));
     setCombo(nextCombo);
@@ -482,13 +482,6 @@ export default function GamePage() {
       }
     }
   };
-
-  // 콤보 → 점수 배율 (콤보가 커질수록 기하급수적으로 보상)
-  // 1~5: 콤보 × 0.5, 6~10: 콤보 × 0.6, 11+: 콤보 × 0.8
-  const tierFactor = (c: number) =>
-    c >= 11 ? 0.8 :
-    c >= 6  ? 0.6 :
-              0.5;
 
   // 아이템 사용 — 인벤토리 슬롯 인덱스로 발동
   const useItemAt = (idx: number) => {
@@ -625,19 +618,6 @@ export default function GamePage() {
         sound.play('wrong');
         break;
     }
-  };
-
-  // 단어 길이별 기본 점수 (비선형 — 긴 단어일수록 가성비 ↑)
-  const baseScore = (len: number) => {
-    if (len <= 2) return 4;
-    if (len <= 3) return 6;
-    if (len <= 4) return 8;
-    if (len <= 5) return 12;
-    if (len <= 6) return 16;
-    if (len <= 7) return 20;
-    if (len <= 8) return 24;
-    if (len <= 9) return 28;
-    return 32;
   };
 
   // 콤보 티어 → 색상 / 라벨
