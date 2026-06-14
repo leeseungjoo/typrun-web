@@ -34,6 +34,7 @@ interface Result {
   mine: number;
   top: number;
   outcome: 'win' | 'loss' | 'draw';
+  official: boolean; // 서버 match:over 면 true, 폴백 로컬 잠정이면 false
 }
 
 // 배틀 대결 화면(v1) — 내 결정성 필드 + 상대 점수(이벤트로 로컬 산출) + 별똥별.
@@ -58,11 +59,20 @@ export default function BattleGame({
     return init;
   });
   const [result, setResult] = useState<Result | null>(null);
+  const [awaiting, setAwaiting] = useState(false); // 내 게임 종료 후 서버 match:over 대기
   const meteorIdRef = useRef(0);
   const oppRef = useRef(opp);
   useEffect(() => {
     oppRef.current = opp;
   }, [opp]);
+  const resultRef = useRef<Result | null>(null);
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+  }, []);
   const poolRef = useRef<Word[] | null>(pool);
   useEffect(() => {
     poolRef.current = pool;
@@ -131,24 +141,35 @@ export default function BattleGame({
         correct: stats.correct,
         miss: stats.miss,
       });
-      // 로컬 잠정 결과(서버 권위 집계는 다음 Phase)
-      const tops = Object.values(oppRef.current).map((o) => o.score);
-      const top = tops.length ? Math.max(...tops) : 0;
-      const outcome: Result['outcome'] = stats.score > top ? 'win' : stats.score < top ? 'loss' : 'draw';
-      setResult({ mine: stats.score, top, outcome });
+      setAwaiting(true);
+      // 서버 match:over 를 기다리되, 안 오면(지연/장애) 로컬 잠정 결과로 폴백.
+      fallbackTimerRef.current = setTimeout(() => {
+        if (resultRef.current) return;
+        const tops = Object.values(oppRef.current).map((o) => o.score);
+        const top = tops.length ? Math.max(...tops) : 0;
+        const outcome: Result['outcome'] = stats.score > top ? 'win' : stats.score < top ? 'loss' : 'draw';
+        setResult({ mine: stats.score, top, outcome, official: false });
+      }, 8000);
     },
   });
 
-  // 상대 이벤트 수신 — 풀 로드 여부와 무관하게 항상 구독(준비 전엔 버퍼링).
+  // 상대 이벤트 + 서버 결과 수신 — 풀 로드 여부와 무관하게 항상 구독(준비 전엔 버퍼링).
   useEffect(() => {
     const off = socket.onMessage((msg) => {
-      if (msg.t !== 'opponent:clear') return;
-      const pl = poolRef.current;
-      if (pl && pl.length > 0) applyOppClear(pl, msg.userSeq, msg.spawnIndex, msg.combo);
-      else pendingOppRef.current.push({ userSeq: msg.userSeq, spawnIndex: msg.spawnIndex, combo: msg.combo });
+      if (msg.t === 'opponent:clear') {
+        const pl = poolRef.current;
+        if (pl && pl.length > 0) applyOppClear(pl, msg.userSeq, msg.spawnIndex, msg.combo);
+        else pendingOppRef.current.push({ userSeq: msg.userSeq, spawnIndex: msg.spawnIndex, combo: msg.combo });
+      } else if (msg.t === 'match:over') {
+        if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+        const mine = msg.results.find((r) => r.userSeq === you);
+        const others = msg.results.filter((r) => r.userSeq !== you).map((r) => r.finalScore);
+        const top = others.length ? Math.max(...others) : 0;
+        if (mine) setResult({ mine: mine.finalScore, top, outcome: mine.result, official: true });
+      }
     });
     return off;
-  }, [socket, applyOppClear]);
+  }, [socket, applyOppClear, you]);
 
   // 풀 준비되면 버퍼 drain.
   useEffect(() => {
@@ -212,7 +233,9 @@ export default function BattleGame({
           </div>
         </div>
         <p aria-hidden className="text-[11px] text-white/55 mb-5">
-          서버 권위 집계·전적 반영은 곧 추가됩니다(베타).
+          {result.official
+            ? '공식 결과 · 전적 반영은 곧 추가됩니다(베타).'
+            : '임시 결과(서버 응답 지연) · 전적 반영은 곧.'}
         </p>
         <button
           ref={resultBtnRef}
@@ -221,6 +244,18 @@ export default function BattleGame({
         >
           리그로 돌아가기
         </button>
+      </div>
+    );
+  }
+
+  if (awaiting) {
+    return (
+      <div className="card text-center py-10" role="status" aria-live="polite">
+        <div className="flex justify-center mb-4" aria-hidden>
+          <span className="inline-block h-9 w-9 rounded-full border-4 border-white/15 border-t-violet-400 animate-spin" />
+        </div>
+        <p className="font-bold mb-1">결과 집계 중…</p>
+        <p className="text-sm text-white/55">상대 종료를 기다리고 있어요.</p>
       </div>
     );
   }
