@@ -104,8 +104,22 @@ export default function LeagueDetailPage() {
               badge={!playable ? '오픈예정' : undefined}
               onClick={() => nav(`/game/${cat.seq}`)}
             />
-            <ModeButton emoji="⚔️" title="배틀 2인" subtitle="실시간 1:1 대결" ready={false} badge="곧 오픈" />
-            <ModeButton emoji="🔥" title="배틀 3인" subtitle="실시간 3인 혼전" ready={false} badge="곧 오픈" />
+            <ModeButton
+              emoji="⚔️"
+              title="배틀 2인"
+              subtitle="실시간 1:1 대결 · 베타"
+              ready={playable}
+              badge={playable ? '베타' : '오픈예정'}
+              onClick={() => nav(`/battle/${cat.seq}/2p`)}
+            />
+            <ModeButton
+              emoji="🔥"
+              title="배틀 3인"
+              subtitle="실시간 3인 혼전 · 베타"
+              ready={playable}
+              badge={playable ? '베타' : '오픈예정'}
+              onClick={() => nav(`/battle/${cat.seq}/3p`)}
+            />
           </div>
 
           <button onClick={() => nav(`/rankings/${cat.seq}`)} className="btn-ghost w-full mt-5">
@@ -113,7 +127,7 @@ export default function LeagueDetailPage() {
           </button>
 
           <p className="text-[11px] text-white/55 text-center mt-3">
-            실시간 배틀은 곧 오픈됩니다. 지금은 랭킹전으로 최고 기록에 도전하세요.
+            실시간 배틀은 베타예요. 상대가 없으면 매칭이 지연될 수 있어요.
           </p>
         </>
       )}
@@ -149,15 +163,18 @@ function ModeButton({ emoji, title, subtitle, ready, badge, onClick }: ModeButto
         <span className="block font-bold text-base">{title}</span>
         <span className="block text-xs text-white/50">{subtitle}</span>
       </span>
-      {ready ? (
-        <span className="text-white/40 text-xl" aria-hidden>
-          ›
-        </span>
-      ) : badge ? (
-        <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
-          {badge}
-        </span>
-      ) : null}
+      <span className="flex items-center gap-2 shrink-0">
+        {badge && (
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
+            {badge}
+          </span>
+        )}
+        {ready && (
+          <span className="text-white/40 text-xl" aria-hidden>
+            ›
+          </span>
+        )}
+      </span>
     </motion.button>
   );
 }
