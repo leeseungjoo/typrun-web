@@ -129,10 +129,16 @@ export default function LoginPage() {
           if (r && /^\d+$/.test(r)) ref = Number(r);
         } catch { /* ignore */ }
         const res = await signupEmail(email, password, nickname.trim(), ref);
-        // 하드 정책: 로그인 안 되고 인증 대기 화면으로
-        setPendingEmail(res.email);
-        if (res.mail_sent === false) {
-          setErr('가입은 됐지만 메일 발송에 실패했어요. 아래에서 재전송해 주세요.');
+        if (res.pending === false) {
+          // 자동 인증(이메일 인증 미사용) — 가입 즉시 로그인 처리
+          await refresh();
+          nav(fromPath, { replace: true });
+        } else {
+          // 인증 대기 화면
+          setPendingEmail(res.email);
+          if (res.mail_sent === false) {
+            setErr('가입은 됐지만 메일 발송에 실패했어요. 아래에서 재전송해 주세요.');
+          }
         }
       } else {
         await loginEmail(email, password);
