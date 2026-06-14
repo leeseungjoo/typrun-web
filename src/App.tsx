@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import MainPage from './pages/MainPage';
 import LeaguePage from './pages/LeaguePage';
+import LeagueDetailPage from './pages/LeagueDetailPage';
 import GamePage from './pages/GamePage';
 import GameOverPage from './pages/GameOverPage';
 import RankingsPage from './pages/RankingsPage';
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/league" element={<LeaguePage />} />
+        <Route path="/league/:categorySeq" element={<LeagueDetailPage />} />
         <Route path="/game/:categorySeq" element={<GamePage />} />
         <Route path="/game-over" element={<GameOverPage />} />
         <Route path="/rankings" element={<RankingsPage />} />

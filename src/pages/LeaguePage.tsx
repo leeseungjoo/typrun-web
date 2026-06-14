@@ -59,8 +59,9 @@ export default function LeaguePage() {
                   <CategoryCard
                     key={c.seq}
                     cat={c}
-                    onClick={() => nav(`/game/${c.seq}`)}
+                    onClick={() => nav(`/league/${c.seq}`)}
                     onRanking={() => nav(`/rankings/${c.seq}`)}
+                    isRankingLeague
                   />
                 ))}
               </div>
@@ -81,10 +82,12 @@ function CategoryCard({
   cat,
   onClick,
   onRanking,
+  isRankingLeague = false,
 }: {
   cat: Category;
   onClick: () => void;
   onRanking?: () => void;
+  isRankingLeague?: boolean; // 랭킹 리그는 클릭 시 모드선택 페이지로 이동 → CTA 라벨을 '입장하기'로
 }) {
   const isComingSoon = cat.status === 'coming_soon';
   const isEnded = cat.status === 'ended';
@@ -132,7 +135,7 @@ function CategoryCard({
             if (playable) onClick();
           }}
         >
-          {isComingSoon ? '오픈예정' : isEnded ? '다시 플레이' : '플레이'}
+          {isComingSoon ? '오픈예정' : isRankingLeague ? '입장하기' : isEnded ? '다시 플레이' : '플레이'}
         </button>
         {onRanking && (
           <button

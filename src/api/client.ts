@@ -13,7 +13,8 @@ import type {
 
 const BASE = import.meta.env.VITE_API_BASE_URL;
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+// 공용 요청 헬퍼 — 같은 봉투 규약을 쓰는 다른 api 모듈(battle.ts 등)에서도 재사용.
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     credentials: 'include',

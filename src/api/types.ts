@@ -177,6 +177,14 @@ export interface DrawWinnersResponse {
   winners: DrawWinnerEmail[];
 }
 
+// 배틀 리그별 접속자 카운터 (게임중/대기중) — typrun-ws read-through
+export interface BattleStatus {
+  category_seq: number;
+  playing: number;          // 진행 중 매치에 묶인 인원
+  waiting: number;          // 매칭 큐 대기 인원
+  degraded?: boolean;       // WS 일시 장애로 직전값/0 폴백 서빙 중
+}
+
 // 문의 / 오류신고 / 콜라보·협업
 export interface ContactForm {
   kind: 'inquiry' | 'bug' | 'collab';
