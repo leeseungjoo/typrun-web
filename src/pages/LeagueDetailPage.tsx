@@ -5,8 +5,12 @@ import { api } from '../api/client';
 import type { Category } from '../api/types';
 import LiveCounter from '../components/battle/LiveCounter';
 
+// 배틀 실서비스 게이트 — ws.typrun.com 배포 + Phase 3b(점수권위·전적) 완료 후 true.
+// false 면 배틀 버튼은 '곧 오픈'(비활성)으로 노출되어 죽은 로비로 빠지지 않는다.
+const BATTLE_ENABLED = false;
+
 // 리그 선택 → 이 페이지에서 모드(랭킹전 / 배틀2인 / 배틀3인) 선택.
-// P1: 랭킹전만 활성, 배틀은 P2 로비 연결 후 오픈. 상단에 리그별 접속자 카운터.
+// 랭킹전만 활성, 배틀은 ws 배포 후 오픈. 상단에 리그별 접속자 카운터.
 export default function LeagueDetailPage() {
   const nav = useNavigate();
   const { categorySeq } = useParams();
@@ -107,17 +111,17 @@ export default function LeagueDetailPage() {
             <ModeButton
               emoji="⚔️"
               title="배틀 2인"
-              subtitle="실시간 1:1 대결 · 베타"
-              ready={playable}
-              badge={playable ? '베타' : '오픈예정'}
+              subtitle="실시간 1:1 대결"
+              ready={BATTLE_ENABLED && playable}
+              badge={!playable ? '오픈예정' : BATTLE_ENABLED ? '베타' : '곧 오픈'}
               onClick={() => nav(`/battle/${cat.seq}/2p`)}
             />
             <ModeButton
               emoji="🔥"
               title="배틀 3인"
-              subtitle="실시간 3인 혼전 · 베타"
-              ready={playable}
-              badge={playable ? '베타' : '오픈예정'}
+              subtitle="실시간 3인 혼전"
+              ready={BATTLE_ENABLED && playable}
+              badge={!playable ? '오픈예정' : BATTLE_ENABLED ? '베타' : '곧 오픈'}
               onClick={() => nav(`/battle/${cat.seq}/3p`)}
             />
           </div>
@@ -127,7 +131,9 @@ export default function LeagueDetailPage() {
           </button>
 
           <p className="text-[11px] text-white/55 text-center mt-3">
-            실시간 배틀은 베타예요. 상대가 없으면 매칭이 지연될 수 있어요.
+            {BATTLE_ENABLED
+              ? '실시간 배틀은 베타예요. 상대가 없으면 매칭이 지연될 수 있어요.'
+              : '실시간 배틀이 곧 열려요. 지금은 랭킹전으로 최고 기록에 도전하세요.'}
           </p>
         </>
       )}
