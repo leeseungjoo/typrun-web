@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
@@ -18,8 +19,27 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import TopBar from './components/TopBar';
 import SceneBackground from './components/SceneBackground';
+import MaintenanceGate from './components/MaintenanceGate';
+import { getAppStatus } from './api/status';
 
 export default function App() {
+  // 점검모드 조회 — ON 이면 게임 전체를 점검 화면으로 대체.
+  const [maint, setMaint] = useState<{ on: boolean; msg: string } | null>(null);
+  useEffect(() => {
+    getAppStatus()
+      .then((s) => setMaint({ on: s.maintenance, msg: s.maintenanceMessage }))
+      .catch(() => setMaint({ on: false, msg: '' }));
+  }, []);
+
+  if (maint?.on) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <SceneBackground />
+        <MaintenanceGate message={maint.msg} />
+      </MotionConfig>
+    );
+  }
+
   return (
     // reducedMotion="user" — OS '동작 줄이기' 설정 시 모든 framer-motion 연출 자동 감속(a11y).
     <MotionConfig reducedMotion="user">
