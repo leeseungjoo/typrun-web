@@ -6,6 +6,30 @@ import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import type { Word, Category } from '../api/types';
+import {
+  ITEM_POOL,
+  randomItemDef,
+  MAX_INVENTORY,
+  ITEM_DROP_CHANCE,
+  SLOW_DURATION_MS,
+  FREEZE_DURATION_MS,
+  BOOSTER_DURATION_MS,
+  BLUR_DURATION_MS,
+  SPEEDUP_DURATION_MS,
+  BOOSTER_MULTIPLIER,
+  SLOW_FACTOR,
+  SPEEDUP_FACTOR,
+  BOMB_SCORE_PER_WORD,
+  TIME_EXTEND_SEC,
+  SNIPE_BONUS,
+  COMBO_BOOST,
+  WORD_BURST_COUNT,
+  type ItemEffect,
+  type ItemDef,
+  type InventoryItem,
+  type TimedEffect,
+  type ActiveEffect,
+} from '../lib/items';
 
 interface ActiveWord {
   id: number;
@@ -25,35 +49,6 @@ interface ScorePopup {
 }
 
 type Phase = 'loading' | 'ready' | 'playing' | 'over';
-
-type ItemEffect =
-  // 슬롯 (1~5 키 발동)
-  | 'slow_motion' | 'freeze' | 'clear_all' | 'booster'
-  | 'time_extend' | 'shield' | 'snipe' | 'combo_boost'
-  // 즉시 발동
-  | 'heal' | 'blur' | 'speedup' | 'word_burst' | 'combo_break';
-
-interface ItemDef {
-  effect: ItemEffect;
-  name: string;
-  icon: string;
-  hint: string;
-  slot: boolean;   // true = 인벤토리 저장, false = 즉시 발동
-  weight: number;  // 드롭 가중치
-  positive: boolean; // UI 색상용
-}
-
-interface InventoryItem extends ItemDef {
-  id: number;
-}
-
-type TimedEffect = 'slow_motion' | 'freeze' | 'booster' | 'blur' | 'speedup';
-
-interface ActiveEffect {
-  id: number;
-  effect: TimedEffect;
-  endsAt: number; // performance.now() ms
-}
 
 const GAME_DURATION = 120;
 const SUPER_GAME_DURATION = 300; // 생초보: 5분 (천천히 충분히 연습)
@@ -78,51 +73,6 @@ const COMBO_TIMEOUT_MS = 4000;
 const SUPER_COMBO_TIMEOUT_MS = COMBO_TIMEOUT_MS * 2; // 생초보 기본 하한 8초
 // 콤보 유지시간은 현재 리젠 간격에 비례 — 항상 리젠보다 길게 (리젠 전에 콤보가 꺼지는 현상 방지)
 const COMBO_SPAWN_FACTOR = 2.0;
-
-const MAX_INVENTORY = 5;
-const ITEM_DROP_CHANCE = 0.15; // 단어 스폰 시 아이템 부착 확률
-const SLOW_DURATION_MS = 6000;
-const FREEZE_DURATION_MS = 3000;
-const BOOSTER_DURATION_MS = 10000;
-const BLUR_DURATION_MS = 5000;
-const SPEEDUP_DURATION_MS = 3000;
-const BOOSTER_MULTIPLIER = 10;
-const SLOW_FACTOR = 0.4;
-const SPEEDUP_FACTOR = 1.5;
-const BOMB_SCORE_PER_WORD = 50;
-const TIME_EXTEND_SEC = 10;
-const SNIPE_BONUS = 100;
-const COMBO_BOOST = 5;
-const WORD_BURST_COUNT = 4;
-
-const ITEM_POOL: ItemDef[] = [
-  // ===== 슬롯 (1~5 키 발동) =====
-  { effect: 'slow_motion',  name: '슬로우',     icon: '🐢',   slot: true,  positive: true,  weight: 10, hint: '6초간 낙하 60% 감속' },
-  { effect: 'freeze',       name: '프리즈',     icon: '🧊',   slot: true,  positive: true,  weight: 7,  hint: '3초간 모두 정지' },
-  { effect: 'booster',      name: '부스터',     icon: '⚡',   slot: false, positive: true,  weight: 8,  hint: '10초간 점수 x10 (즉시 발동)' },
-  { effect: 'clear_all',    name: '폭탄',       icon: '💣',   slot: true,  positive: true,  weight: 6,  hint: '화면 단어 모두 폭파 (단어당 +50)' },
-  { effect: 'time_extend',  name: '시간연장',   icon: '⏰',   slot: true,  positive: true,  weight: 6,  hint: '게임 시간 +10초' },
-  { effect: 'shield',       name: '방어막',     icon: '🛡',   slot: true,  positive: true,  weight: 7,  hint: '다음 miss 1회 무효' },
-  { effect: 'snipe',        name: '저격',       icon: '🎯',   slot: true,  positive: true,  weight: 6,  hint: '가장 아래 단어 1개 즉시 폭파 (+100)' },
-  { effect: 'combo_boost',  name: '콤보부스트', icon: '💎',   slot: true,  positive: true,  weight: 5,  hint: '콤보 즉시 +5' },
-  // ===== 즉시 발동 =====
-  { effect: 'heal',         name: '힐',         icon: '❤️‍🩹', slot: false, positive: true,  weight: 8,  hint: 'HP +1 (최대 5)' },
-  { effect: 'blur',         name: '블러',       icon: '👁‍🗨', slot: false, positive: false, weight: 6,  hint: '5초간 단어 흐림' },
-  { effect: 'speedup',      name: '가속',       icon: '💨',   slot: false, positive: false, weight: 6,  hint: '3초간 낙하 1.5배' },
-  { effect: 'word_burst',   name: '단어폭주',   icon: '🌪',   slot: false, positive: false, weight: 5,  hint: '즉시 4개 추가 스폰' },
-  { effect: 'combo_break',  name: '콤보붕괴',   icon: '🥚',   slot: false, positive: false, weight: 5,  hint: '콤보 즉시 0' },
-];
-
-const TOTAL_WEIGHT = ITEM_POOL.reduce((sum, it) => sum + it.weight, 0);
-
-const randomItemDef = (): ItemDef => {
-  let r = Math.random() * TOTAL_WEIGHT;
-  for (const it of ITEM_POOL) {
-    r -= it.weight;
-    if (r <= 0) return it;
-  }
-  return ITEM_POOL[0];
-};
 
 let _wid = 0;
 const newId = () => ++_wid;
@@ -149,6 +99,7 @@ export default function GamePage() {
   const [isPractice, setIsPractice] = useState(false);
   const [isSuperBeginner, setIsSuperBeginner] = useState(false);
   const [phase, setPhase] = useState<Phase>('loading');
+  const [readyCountdown, setReadyCountdown] = useState<number | null>(null); // 랭킹전 자동 시작 카운트
   const [active, setActive] = useState<ActiveWord[]>([]);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -270,6 +221,28 @@ export default function GamePage() {
       })
       .catch((e) => setErr(String(e)));
   }, [categorySeq]);
+
+  // 랭킹전: 시작 버튼 없이 5초 카운트 후 자동 시작(기획 2026-06-15). 연습/생초보는 수동 시작 유지.
+  useEffect(() => {
+    if (phase !== 'ready' || isPractice) {
+      setReadyCountdown(null);
+      return;
+    }
+    setReadyCountdown(5);
+    let remaining = 5;
+    const id = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(id);
+        setReadyCountdown(0);
+        sound.play('start');
+        setPhase('playing');
+      } else {
+        setReadyCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, isPractice]);
 
   // 게임 루프
   useEffect(() => {
@@ -676,15 +649,24 @@ export default function GamePage() {
             🌱 연습 리그 · 천천히 떨어져요 · 생명 5개 · 랭킹 미집계
           </div>
         )}
-        <button
-          className="btn-primary text-lg"
-          onClick={() => {
-            sound.play('start');
-            setPhase('playing');
-          }}
-        >
-          시작!
-        </button>
+        {isPractice ? (
+          <button
+            className="btn-primary text-lg"
+            onClick={() => {
+              sound.play('start');
+              setPhase('playing');
+            }}
+          >
+            시작!
+          </button>
+        ) : (
+          <div className="flex flex-col items-center gap-1" role="status" aria-live="polite">
+            <span className="text-7xl font-impact text-violet-200 tabular-nums leading-none" aria-hidden>
+              {readyCountdown ?? 5}
+            </span>
+            <span className="text-sm text-white/60">초 후 자동 시작!</span>
+          </div>
+        )}
         <button className="btn-ghost text-sm" onClick={() => nav('/league')}>
           ← 리그 선택
         </button>

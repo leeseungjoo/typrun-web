@@ -110,19 +110,11 @@ export default function LeagueDetailPage() {
             />
             <ModeButton
               emoji="⚔️"
-              title="배틀 2인"
-              subtitle="실시간 1:1 대결"
+              title="배틀"
+              subtitle="실시간 1:1 대결 · 상대가 들어오면 자동 시작"
               ready={BATTLE_ENABLED && playable}
               badge={!playable ? '오픈예정' : BATTLE_ENABLED ? '베타' : '곧 오픈'}
               onClick={() => nav(`/battle/${cat.seq}/2p`)}
-            />
-            <ModeButton
-              emoji="🔥"
-              title="배틀 3인"
-              subtitle="실시간 3인 혼전"
-              ready={BATTLE_ENABLED && playable}
-              badge={!playable ? '오픈예정' : BATTLE_ENABLED ? '베타' : '곧 오픈'}
-              onClick={() => nav(`/battle/${cat.seq}/3p`)}
             />
           </div>
 

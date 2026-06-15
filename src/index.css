@@ -27,6 +27,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 배경 별 반짝임 (장식, SceneBackground) — compositor 친화(opacity/transform)만 애니메이션 */
+@keyframes tw-twinkle {
+  0%, 100% { opacity: var(--tw-min, 0.15); transform: scale(0.8); }
+  50% { opacity: var(--tw-max, 0.9); transform: scale(1); }
+}
+.tw-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: #fff;
+  will-change: opacity, transform;
+  animation: tw-twinkle var(--tw-dur, 3s) ease-in-out infinite;
+  animation-delay: var(--tw-delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-star { animation: none; opacity: 0.4; }
+}
+
 /* 공용 글로벌 컴포넌트 스타일 — 버튼/카드/인풋 (Figma 디자인 기준) */
 .btn-primary {
   @apply px-6 py-3 rounded-xl bg-primary text-white font-semibold transition hover:brightness-110 active:scale-95;

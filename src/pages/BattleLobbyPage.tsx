@@ -15,8 +15,6 @@ interface MatchInfo {
   you: number;
 }
 
-const MODE_LABEL: Record<Mode, string> = { '2p': '2인', '3p': '3인' };
-
 // 배틀 로비 — 매칭 대기 → 상대 발견 → 카운트다운 → 시작.
 // P1 Phase 1: 매칭 흐름만(서버 큐/룸 기존 구현). 실제 대결 화면(BattleGamePage)은 다음 Phase.
 export default function BattleLobbyPage() {
@@ -177,17 +175,11 @@ export default function BattleLobbyPage() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <span aria-hidden>⚔️</span> {MODE_LABEL[mode]} 배틀
+          <span aria-hidden>⚔️</span> 배틀
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
             베타
           </span>
         </h1>
-        <button
-          onClick={() => nav(`/league/${categorySeq}`)}
-          className="text-sm text-white/50 hover:text-white rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          나가기
-        </button>
       </div>
 
       {err && (
@@ -214,6 +206,16 @@ export default function BattleLobbyPage() {
       )}
 
       {notice && !match && <p className="text-xs text-amber-200/80 text-center mt-3">{notice}</p>}
+
+      {/* 대기/카운트다운 중 하단 큰 나가기 버튼(기획 2026-06-15) */}
+      {!started && (
+        <button
+          onClick={() => nav(`/league/${categorySeq}`)}
+          className="mt-8 w-full py-4 rounded-2xl bg-white/8 hover:bg-white/15 border border-white/15 text-base font-bold text-white/80 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          ← 대기 취소하고 나가기
+        </button>
+      )}
     </div>
   );
 }
