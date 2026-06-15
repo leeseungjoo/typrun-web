@@ -76,7 +76,7 @@ const SPEED_MAX = 10;
 const BOTTOM_Y = 105;
 const COMBO_TIMEOUT_MS = 4000;
 const COMBO_SPAWN_FACTOR = 2.0;
-const TYPING_THROTTLE = 2; // 2타마다 한 번 상대에게 입력 진행 전송
+const TYPING_THROTTLE = 1; // 매 타마다 상대에게 입력 진행 전송(실시간 표시)
 
 export function useBattleEngine(opts: UseBattleEngineOpts) {
   const { pool, matchSeed, durationSec, running } = opts;
@@ -306,6 +306,8 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     };
 
     const tick = (now: number) => {
+      // 종료(시간만료/HP0/상대종료) 후 잔여 프레임 정지 — 단어 낙하·미스 사운드가 계속 들리지 않게.
+      if (finishedRef.current) return;
       const dt = (now - last) / 1000;
       last = now;
       tAcc += dt;

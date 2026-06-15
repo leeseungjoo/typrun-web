@@ -105,7 +105,8 @@ export default function BattleGame({
     pool: pool ?? [],
     matchSeed,
     durationSec: MATCH_DURATION_SEC,
-    running: running && !!pool && pool.length > 0,
+    // 결과/집계 화면 진입 시 엔진 정지 — 단어 낙하·미스 사운드가 백그라운드에서 계속되지 않게.
+    running: running && !!pool && pool.length > 0 && !awaiting && !result,
     onClear: (e) => {
       socket.send({ t: 'word:clear', matchId, spawnIndex: e.spawnIndex, typed: e.word, comboAfter: e.combo, elapsedMs: e.elapsedMs });
     },
@@ -272,22 +273,38 @@ export default function BattleGame({
 
   return (
     <div className="fixed inset-0 z-40 bg-[#0F1226] overflow-hidden" role="group" aria-label="실시간 배틀 진행 중">
-      {/* 상단 HUD */}
-      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-black/45 backdrop-blur-sm">
-        <Hearts hp={eng.hp} max={MAX_HP} label={`내 생명 ${eng.hp} / ${MAX_HP}`} />
-        <div className="text-center leading-tight">
-          <span className="font-impact text-2xl" aria-label={`내 점수 ${eng.score}`}>
+      {/* 상단 HUD — 좌: 나 / 중앙: 시간 / 우: 상대(컴팩트) + 나가기 */}
+      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 bg-black/45 backdrop-blur-sm">
+        {/* 나 */}
+        <div className="flex items-center gap-2 min-w-0">
+          <Hearts hp={eng.hp} max={MAX_HP} label={`내 생명 ${eng.hp} / ${MAX_HP}`} small />
+          <span className="font-impact text-2xl leading-none" aria-label={`내 점수 ${eng.score}`}>
             {eng.score.toLocaleString()}
+          </span>
+          <span className="text-xs text-orange-300/90">🔥{eng.combo}</span>
+        </div>
+
+        {/* 중앙 시간 */}
+        <div className="text-center leading-tight shrink-0">
+          <span className="block text-sm text-white/80" aria-label={`남은 시간 ${eng.timeLeft}초`}>
+            <span aria-hidden>⏱</span> {eng.timeLeft}s
           </span>
           <span className="block text-[10px] text-amber-300/90">{WIN_THRESHOLD}점↑ 승부 · 미만 무효</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-white/70" aria-label={`남은 시간 ${eng.timeLeft}초`}>
-            <span aria-hidden>⏱</span> {eng.timeLeft}s
-          </span>
+
+        {/* 상대(컴팩트) + 나가기 */}
+        <div className="flex items-center gap-2 min-w-0 justify-end">
+          <div className="text-right leading-none min-w-0">
+            <span className="block text-[11px] text-white/55 truncate max-w-[26vw]">{opp.nickname}</span>
+            <div className="flex items-center justify-end gap-1.5 mt-0.5">
+              <Hearts hp={opp.hp} max={MAX_HP} label={`상대 생명 ${opp.hp} / ${MAX_HP}`} small />
+              <span className="font-impact text-xl leading-none tabular-nums">{opp.score.toLocaleString()}</span>
+              <span className="text-[11px] text-orange-300/90">🔥{opp.combo}</span>
+            </div>
+          </div>
           <button
             onClick={onExit}
-            className="text-white/60 hover:text-red-400 text-lg leading-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="text-white/60 hover:text-red-400 text-lg leading-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 shrink-0"
             aria-label="배틀 나가기"
           >
             <span aria-hidden>✕</span>
@@ -295,61 +312,37 @@ export default function BattleGame({
         </div>
       </div>
 
-      {/* 본문 — 양분: 좌 내 필드 / 우 상대 패널 */}
-      <div className="absolute top-[52px] bottom-[150px] inset-x-0">
-        {/* 중앙 분리선 */}
-        <div aria-hidden className="absolute left-1/2 top-0 bottom-0 w-px bg-white/15" />
-
-        {/* 좌: 내 필드 */}
-        <div className="absolute left-0 top-0 bottom-0 w-1/2 overflow-hidden">
-          <span className="absolute top-1 left-3 text-[11px] font-bold text-white/40">나</span>
-          <AnimatePresence>
-            {eng.active.map((a) => (
-              <motion.div
-                key={a.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5, y: -20 }}
-                transition={{ duration: 0.15 }}
-                className="absolute -translate-x-1/2 select-none pointer-events-none transition-[filter] duration-200"
-                style={{ left: `${a.x}%`, top: `${a.y}%`, filter: blurOn ? 'blur(6px)' : 'none' }}
+      {/* 본문 — 전체 폭 내 필드: 단어가 화면 전체에서 내려온다(한쪽 몰림 해소) */}
+      <div className="absolute top-[60px] bottom-[150px] inset-x-0 overflow-hidden">
+        <AnimatePresence>
+          {eng.active.map((a) => (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5, y: -20 }}
+              transition={{ duration: 0.15 }}
+              className="absolute -translate-x-1/2 select-none pointer-events-none transition-[filter] duration-200"
+              style={{ left: `${a.x}%`, top: `${a.y}%`, filter: blurOn ? 'blur(6px)' : 'none' }}
+            >
+              {a.item && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-yellow-400/80 text-black flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(250,200,0,0.8)]">
+                  ?
+                </span>
+              )}
+              <div
+                className={`px-3 py-1.5 rounded-lg backdrop-blur border ${
+                  a.item ? 'bg-yellow-400/10 border-yellow-400/60' : a.id < 0 ? 'bg-red-500/15 border-red-400/50' : 'bg-white/10 border-white/20'
+                }`}
               >
-                {a.item && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-yellow-400/80 text-black flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(250,200,0,0.8)]">
-                    ?
-                  </span>
-                )}
-                <div
-                  className={`px-3 py-1.5 rounded-lg backdrop-blur border ${
-                    a.item ? 'bg-yellow-400/10 border-yellow-400/60' : a.id < 0 ? 'bg-red-500/15 border-red-400/50' : 'bg-white/10 border-white/20'
-                  }`}
-                >
-                  <div className="text-2xl font-bold">{a.word.word}</div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                <div className="text-2xl md:text-3xl font-bold">{a.word.word}</div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
-        {/* 우: 상대 패널 */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden flex flex-col items-center justify-center text-center px-4">
-          <p className="absolute top-1 right-3 text-[11px] font-bold text-white/40">상대</p>
-          <p className="text-sm text-white/70 truncate max-w-full mb-1">{opp.nickname}</p>
-          <Hearts hp={opp.hp} max={MAX_HP} label={`상대 생명 ${opp.hp} / ${MAX_HP}`} small />
-          <p className="font-impact text-4xl tabular-nums mt-2 leading-none">{opp.score.toLocaleString()}</p>
-          <p className="text-xs text-orange-300 mt-1">🔥 {opp.combo}</p>
-          <div className="mt-4 h-12 flex items-center justify-center">
-            {opp.typingWord ? (
-              <span className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xl font-bold tracking-wide">
-                {opp.typingWord}
-                <span className="text-white/30">…</span>
-              </span>
-            ) : (
-              <span className="text-xs text-white/30">입력 대기 중</span>
-            )}
-          </div>
-          <MeteorLayer meteors={meteors} />
-        </div>
+        {/* 상대가 자기 필드 단어를 깰 때 화면을 가로지르는 별똥별(연출) */}
+        <MeteorLayer meteors={meteors} />
       </div>
 
       {/* 하단 — 아이템덱 + 효과 + 양분 입력 */}

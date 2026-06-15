@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
+import ScrollingGround from '../components/ScrollingGround';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -985,8 +986,11 @@ export default function GamePage() {
         ))}
       </div>
 
+      {/* 가로 스크롤 땅 — 입력창 바로 위, 화면 전체 폭(러너 느낌) */}
+      <ScrollingGround durationSec={isSuperBeginner ? 12 : isPractice ? 9 : 6} />
+
       {/* Input + 좌우 네비 버튼 (로그인 · 홈) */}
-      <div className="relative px-6 py-4 mb-[10px] border-t border-white/10 bg-black/30 flex items-center justify-center gap-3">
+      <div className="relative px-6 py-4 mb-[10px] bg-black/30 flex items-center justify-center gap-3">
         {eventTitle && (
           <button
             type="button"
