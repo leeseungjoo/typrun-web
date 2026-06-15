@@ -28,6 +28,7 @@ export type ClientMsg =
   | { t: 'word:miss'; matchId: string; spawnIndex: number; hp: number }
   | { t: 'state:update'; matchId: string; score: number; combo: number; hp: number } // 상대 미러뷰 동기화(스로틀)
   | { t: 'item:used'; matchId: string; effect: string } // 공격형 아이템 1개를 상대에게(2인 자동조준)
+  | { t: 'effect:sync'; matchId: string; effect: string } // 공유필드: 낙하속도/정지 효과 양쪽 동기화
   | { t: 'match:finish'; matchId: string; clientScore: number; maxCombo: number; correct: number; miss: number }
   | { t: 'match:resync'; matchId: string };
 
@@ -45,6 +46,7 @@ export type ServerMsg =
   | { t: 'opponent:state'; userSeq: number; score: number; combo: number; hp: number }
   | { t: 'opponent:finished'; userSeq: number } // 상대가 먼저 끝남 → 내 게임도 즉시 종료
   | { t: 'item:used'; userSeq: number; effect: string; targetSeq: number }
+  | { t: 'opponent:effect'; effect: string } // 상대가 발동한 동기화 효과 → 내 필드에도 적용
   | { t: 'match:over'; matchId: string; results: MatchResult[]; isRanked: boolean }
   | { t: 'match:cancelled'; matchId: string; reason: 'opponent_left' } // 카운트다운 중 상대 이탈 → 취소
   | { t: 'error'; code: string; message: string };

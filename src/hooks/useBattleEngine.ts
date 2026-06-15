@@ -62,6 +62,7 @@ export interface UseBattleEngineOpts {
   running: boolean; // 카운트다운 종료 후 true → 루프 시작
   onClear?: (e: ClearEvent) => void; // 공유 단어 클리어(상대 미러 갱신용 중계)
   onClearedFx?: (x: number, y: number, gain: number, meaning?: string) => void; // 내가 깬 자리 인플레이스 점수 팝업용
+  onSyncEffect?: (effect: ItemEffect) => void; // slow/freeze/speedup 양쪽 동기화 relay(공유필드)
   onAttack?: (effect: ItemEffect) => void; // negative 아이템 → 상대에게 발사
   onTyping?: (spawnIndex: number, len: number) => void; // 실시간 입력 진행(상대 표시용)
   onMiss?: (hp: number) => void;
@@ -163,7 +164,11 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
   }, []);
 
   const applyEffect = useCallback(
-    (effect: ItemEffect) => {
+    (effect: ItemEffect, fromRemote = false) => {
+      // 공유필드(수정요청5): 낙하속도/정지 계열은 양쪽 동기화 — 내가 발동하면 상대에게도 relay.
+      if (!fromRemote && (effect === 'slow_motion' || effect === 'freeze' || effect === 'speedup')) {
+        cbRef.current.onSyncEffect?.(effect);
+      }
       switch (effect) {
         case 'slow_motion':
           addTimedEffect('slow_motion', SLOW_DURATION_MS);
@@ -256,7 +261,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
   // 상대 공격 수신 → 내 필드에 적용 + 피격 토스트
   const applyIncomingEffect = useCallback(
     (effect: ItemEffect) => {
-      applyEffect(effect);
+      applyEffect(effect, true); // 수신분은 재relay 안 함
       setLastItem({
         id: ++localIdRef.current,
         item: { effect, name: effect, icon: '⚠', hint: '상대 공격!', slot: false, weight: 0, positive: false },
@@ -473,7 +478,11 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
       const item = hit.item;
       setLastItem({ id: ++localIdRef.current, item });
       if (!item.positive) {
-        cbRef.current.onAttack?.(item.effect); // 상대에게 발사
+        if (item.effect === 'speedup') {
+          applyEffect(item.effect); // 공유필드: 가속은 양쪽 동기화(applyEffect 가 relay)
+        } else {
+          cbRef.current.onAttack?.(item.effect); // 그 외 공격(블러/단어폭주/콤보붕괴)은 상대에게
+        }
       } else if (item.slot) {
         setInventory((prev) => {
           const idx = prev.findIndex((s) => s == null);
@@ -571,6 +580,19 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     setOver(true);
   }, []);
 
+  // 공유필드(수정요청5): 상대가 깬 단어(spawnIndex)를 내 필드에서도 제거 → 그 자리 좌표 반환(인플레이스 터짐용).
+  const removeWord = useCallback((spawnIndex: number): { x: number; y: number } | null => {
+    const w = activeRef.current.find((a) => a.id === spawnIndex);
+    if (!w) return null;
+    setActive((prev) => prev.filter((a) => a.id !== spawnIndex));
+    return { x: w.x, y: w.y };
+  }, []);
+
+  // 상대가 보낸 동기화 효과(거북이/멈춤/가속) 적용 — 재relay/피격토스트 없음.
+  const applySyncEffect = useCallback((effect: ItemEffect) => {
+    applyEffect(effect, true);
+  }, [applyEffect]);
+
   const timeLeft = Math.max(0, Math.ceil(durationSec + bonusTime - elapsed));
 
   return {
@@ -598,5 +620,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     useItemAt,
     applyIncomingEffect,
     finishNow,
+    removeWord,
+    applySyncEffect,
   };
 }

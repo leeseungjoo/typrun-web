@@ -73,9 +73,9 @@ body {
   @apply rounded-[10px] bg-ink/60 border border-[#a9aaae]/80 text-[#f3f3f3] font-bold text-center backdrop-blur-sm transition hover:bg-ink/80 active:scale-[0.98];
 }
 
-/* 공용 상단/네비 버튼 — 전 페이지 일관 (로그인·홈·초대) */
+/* 공용 상단/네비 버튼 — 전 페이지 일관 (로그인·홈·초대). 크기는 리그 탭 버튼 정도로(수정요청5) */
 .topbtn {
-  @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-ink/55 backdrop-blur text-white/85 text-xs font-bold whitespace-nowrap shadow-lg transition hover:bg-ink/75 hover:text-white active:scale-95;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/20 bg-ink/55 backdrop-blur text-white/85 text-sm font-bold whitespace-nowrap shadow-lg transition hover:bg-ink/75 hover:text-white active:scale-95;
 }
 .topbtn-event {
   @apply border-emerald-400/40 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/25 hover:text-emerald-100;

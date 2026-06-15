@@ -110,7 +110,7 @@ export default function GameOverPage() {
       <motion.h2
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-sm tracking-[0.3em] text-white/40 mb-2"
+        className="font-impact text-3xl md:text-4xl tracking-wide text-white/55 mb-2"
       >
         GAME OVER
       </motion.h2>

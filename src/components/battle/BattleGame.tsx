@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../../api/client';
 import { clearScore } from '../../lib/score';
@@ -8,7 +9,6 @@ import { useBattleEngine, INITIAL_HP } from '../../hooks/useBattleEngine';
 import type { BattleSocket } from '../../lib/battleSocket';
 import type { PlayerInfo } from '../../lib/battleProtocol';
 import type { Word } from '../../api/types';
-import MeteorLayer, { type Meteor } from './MeteorLayer';
 
 const MATCH_DURATION_SEC = 120;
 const MAX_HP = 10;
@@ -55,21 +55,24 @@ export default function BattleGame({
   running,
   onExit,
 }: BattleGameProps) {
+  const nav = useNavigate();
   const [pool, setPool] = useState<Word[] | null>(null);
-  const [meteors, setMeteors] = useState<Meteor[]>([]);
   const oppNickname = players.find((p) => p.userSeq !== you)?.nickname ?? '상대';
   const myNickname = players.find((p) => p.userSeq === you)?.nickname ?? '나';
   const [opp, setOpp] = useState<OppState>({ nickname: oppNickname, score: 0, combo: 0, hp: INITIAL_HP, typingWord: null });
   const [result, setResult] = useState<Result | null>(null);
   const [awaiting, setAwaiting] = useState(false);
   const [canExit, setCanExit] = useState(false); // 결과화면 진입 직후 1.5s 는 무심결 Enter 로 못 나가게(수정요청4)
-  // 내가 단어를 깬 자리의 인플레이스 점수 팝업(랭크화면처럼) + 입력칸 성공 이펙트
-  const [popups, setPopups] = useState<{ id: number; x: number; y: number; value: number; meaning?: string }[]>([]);
-  const [inputFxKey, setInputFxKey] = useState(0);
+  // 단어 깬 자리 인플레이스 +점수 팝업(누가 깼는지 표시) + 입력칸 성공 이펙트(양쪽)
+  const [popups, setPopups] = useState<
+    { id: number; x: number; y: number; value: number; meaning?: string; by: string; mine: boolean }[]
+  >([]);
+  const [inputFxKey, setInputFxKey] = useState(0); // 내 입력칸 성공 펄스
+  const [oppInputFxKey, setOppInputFxKey] = useState(0); // 상대 입력칸 성공 펄스
+  const [myStats, setMyStats] = useState<{ maxCombo: number; correct: number; miss: number } | null>(null);
   const popupIdRef = useRef(0);
   const recordedRef = useRef(false); // 전적 영속 1회 보장
 
-  const meteorIdRef = useRef(0);
   const poolRef = useRef<Word[] | null>(pool);
   useEffect(() => {
     poolRef.current = pool;
@@ -118,11 +121,15 @@ export default function BattleGame({
       socket.send({ t: 'word:clear', matchId, spawnIndex: e.spawnIndex, typed: e.word, comboAfter: e.combo, elapsedMs: e.elapsedMs });
     },
     onClearedFx: (x, y, gain, meaning) => {
-      // 깬 자리에서 그대로 터지는 +점수 팝업(랭크화면과 동일) + 입력칸 성공 이펙트.
+      // 내가 깬 자리 +점수 팝업(누가=나) + 내 입력칸 성공 펄스.
       const id = popupIdRef.current++;
-      setPopups((p) => [...p, { id, x, y, value: gain, meaning }]);
+      setPopups((p) => [...p, { id, x, y, value: gain, meaning, by: myNickname, mine: true }]);
       window.setTimeout(() => setPopups((p) => p.filter((q) => q.id !== id)), meaning ? 1500 : 1000);
       setInputFxKey((k) => k + 1);
+    },
+    onSyncEffect: (effect) => {
+      // 공유필드: 거북이/멈춤/가속을 상대 필드에도 적용시키기 위해 중계.
+      socket.send({ t: 'effect:sync', matchId, effect });
     },
     onAttack: (effect) => {
       socket.send({ t: 'item:used', matchId, effect });
@@ -133,6 +140,7 @@ export default function BattleGame({
     },
     onFinish: (stats) => {
       socket.send({ t: 'match:finish', matchId, clientScore: stats.score, maxCombo: stats.maxCombo, correct: stats.correct, miss: stats.miss });
+      setMyStats({ maxCombo: stats.maxCombo, correct: stats.correct, miss: stats.miss }); // 결과화면 정확도/콤보용
       setAwaiting(true);
       fallbackTimerRef.current = setTimeout(() => {
         if (resultRef.current) return;
@@ -144,7 +152,7 @@ export default function BattleGame({
     },
   });
 
-  const { applyIncomingEffect, finishNow } = eng;
+  const { applyIncomingEffect, finishNow, removeWord, applySyncEffect } = eng;
 
   // 내 점수/콤보/생명을 상대 미러로 주기 동기화.
   const engStateRef = useRef({ score: 0, combo: 0, hp: INITIAL_HP });
@@ -170,16 +178,24 @@ export default function BattleGame({
       if (msg.t === 'opponent:state') {
         setOpp((o) => ({ ...o, score: msg.score, combo: msg.combo, hp: msg.hp }));
       } else if (msg.t === 'opponent:clear') {
-        // 상대가 자기 필드 단어를 깸 → 별똥별 연출(내 필드는 건드리지 않음, 독립필드).
+        // 공유필드(수정요청5): 상대가 깬 단어를 내 필드에서도 제거(그 자리 터짐) + 누가 깼는지 팝업 + 상대 입력칸 펄스.
         bumpOppTyping(null);
         const pl = poolRef.current;
         if (pl && pl.length > 0) {
           const s = computeSpawn(pl, matchSeed, msg.spawnIndex);
           const gain = clearScore(s.word.word.length, Math.max(1, Math.min(500, msg.combo)));
-          const id = meteorIdRef.current++;
-          setMeteors((m) => [...m, { id, x: s.x, text: s.word.word, score: gain }]);
-          window.setTimeout(() => setMeteors((m) => m.filter((x) => x.id !== id)), 1200);
+          const pos = removeWord(msg.spawnIndex);
+          const id = popupIdRef.current++;
+          setPopups((p) => [
+            ...p,
+            { id, x: pos?.x ?? s.x, y: pos?.y ?? 12, value: gain, meaning: s.word.meaning?.trim() || undefined, by: oppRef.current.nickname, mine: false },
+          ]);
+          window.setTimeout(() => setPopups((p) => p.filter((q) => q.id !== id)), 1200);
+          setOppInputFxKey((k) => k + 1);
         }
+      } else if (msg.t === 'opponent:effect') {
+        // 공유필드: 상대가 발동한 거북이/멈춤/가속을 내 필드에도 적용.
+        applySyncEffect(msg.effect as ItemEffect);
       } else if (msg.t === 'opponent:typing') {
         const pl = poolRef.current;
         if (pl && pl.length > 0 && msg.spawnIndex >= 0) {
@@ -218,7 +234,7 @@ export default function BattleGame({
       }
     });
     return off;
-  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow]);
+  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow, removeWord, applySyncEffect]);
 
   // 게임 중 아무 키나 누르면 입력칸 포커스 유지.
   useEffect(() => {
@@ -251,42 +267,88 @@ export default function BattleGame({
   }
 
   if (result) {
-    const label = result.outcome === 'win' ? '승리!' : result.outcome === 'loss' ? '패배' : '무승부';
-    const color = result.outcome === 'win' ? 'text-emerald-300' : result.outcome === 'loss' ? 'text-red-300' : 'text-white';
+    // 랭킹 게임종료화면과 동일 톤(수정요청5): 승리=>WINNER, 큰 점수, 정확도/콤보, 통일 하단 버튼.
+    const title = result.outcome === 'win' ? 'WINNER' : result.outcome === 'loss' ? 'LOSE' : 'DRAW';
+    const color =
+      result.outcome === 'win' ? 'text-emerald-300' : result.outcome === 'loss' ? 'text-red-300' : 'text-white';
+    const total = (myStats?.correct ?? 0) + (myStats?.miss ?? 0);
+    const accuracyPct = total > 0 ? Math.round(((myStats?.correct ?? 0) / total) * 100) : 0;
     return (
-      <div className="card text-center py-8" role="status" aria-live="assertive" aria-atomic="true">
+      <div
+        className="fixed inset-0 z-40 bg-[#0F1226] overflow-y-auto flex flex-col items-center justify-center px-6 py-12"
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
         <p className="sr-only">
-          {label}. 내 점수 {result.mine.toLocaleString()}, 상대 {result.top.toLocaleString()}.
+          {title}. 내 점수 {result.mine.toLocaleString()}, 상대 {result.top.toLocaleString()}.
         </p>
-        <p aria-hidden className={`text-4xl font-impact mb-3 ${color}`}>
-          {label}
-        </p>
-        <div aria-hidden className="flex items-center justify-center gap-6 mb-2">
-          <div>
-            <p className="text-xs text-white/60">나</p>
-            <p className="text-2xl font-bold tabular-nums">{result.mine.toLocaleString()}</p>
-          </div>
-          <span className="text-white/30">vs</span>
-          <div>
-            <p className="text-xs text-white/60">{opp.nickname}</p>
-            <p className="text-2xl font-bold tabular-nums">{result.top.toLocaleString()}</p>
-          </div>
+        <motion.p
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm tracking-[0.3em] text-white/40 mb-2"
+          aria-hidden
+        >
+          ⚔️ BATTLE RESULT
+        </motion.p>
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 16 }}
+          className={`font-impact text-6xl md:text-8xl ${color} drop-shadow-[0_3px_0_rgba(0,0,0,0.45)]`}
+          aria-hidden
+        >
+          {title}
+        </motion.div>
+
+        <div
+          className="font-impact text-7xl md:text-8xl text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.45)] mt-3"
+          aria-hidden
+        >
+          {result.mine.toLocaleString()}
         </div>
+        <div className="text-white/40 text-sm mt-1 mb-5" aria-hidden>
+          MY SCORE
+        </div>
+
         {result.voided && (
-          <p aria-hidden className="text-[12px] text-amber-300/90 mb-1">
+          <p aria-hidden className="text-[12px] text-amber-300/90 mb-3">
             ⚠ 둘 다 {WIN_THRESHOLD}점 미만 — 무효판(무승부)
           </p>
         )}
-        <p aria-hidden className="text-[11px] text-white/55 mb-5">
-          {result.official ? '공식 결과 · 전적 반영은 곧 추가됩니다(베타).' : '임시 결과(서버 응답 지연) · 전적 반영은 곧.'}
+
+        {/* 스탯 (랭킹 게임종료화면과 동일 구성) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-3" aria-hidden>
+          <BStat label={`${opp.nickname} 점수`} value={result.top.toLocaleString()} />
+          <BStat label="정확도" value={`${accuracyPct}%`} />
+          <BStat label="최대 콤보" value={myStats?.maxCombo ?? 0} />
+          <BStat label="정답 / 놓침" value={`${myStats?.correct ?? 0} / ${myStats?.miss ?? 0}`} />
+        </div>
+
+        <p aria-hidden className="text-[11px] text-white/45 mb-7">
+          {result.official ? '공식 결과 · 전적에 반영됐어요(베타)' : '임시 결과(서버 응답 지연)'}
         </p>
-        <button
-          className="btn-primary rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={onExit}
-          disabled={!canExit}
-        >
-          {canExit ? '리그로 돌아가기' : '결과 확인 중…'}
-        </button>
+
+        {/* 통일 하단 버튼 — 다시도전 / 랭킹보기 / 리그선택 / 홈 */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!canExit}
+            onClick={() => nav(`/battle/${categorySeq}/2p`, { replace: true })}
+          >
+            🔁 다시 도전
+          </button>
+          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav(`/rankings/${categorySeq}`)}>
+            🏆 랭킹 보기
+          </button>
+          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/league')}>
+            리그 선택
+          </button>
+          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/')}>
+            홈
+          </button>
+        </div>
+        {!canExit && <p className="text-[11px] text-white/35 mt-3">결과 확인 중…</p>}
       </div>
     );
   }
@@ -375,7 +437,7 @@ export default function BattleGame({
           ))}
         </AnimatePresence>
 
-        {/* 내가 깬 자리에서 그대로 솟구치는 +점수 팝업(랭크화면과 동일) */}
+        {/* 단어 터진 자리 +점수 팝업 — 누가 깼는지(나/상대) 표시(수정요청5). 내=노랑, 상대=하늘 */}
         {popups.map((p) => (
           <motion.div
             key={p.id}
@@ -393,7 +455,18 @@ export default function BattleGame({
             className="absolute -translate-x-1/2 pointer-events-none z-20 flex flex-col items-center"
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
           >
-            <span className="font-impact text-3xl text-yellow-300 drop-shadow-[0_0_8px_rgba(255,200,0,0.7)]">
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full mb-0.5 ${
+                p.mine ? 'bg-yellow-400/20 text-yellow-200' : 'bg-sky-400/20 text-sky-200'
+              }`}
+            >
+              {p.mine ? '나' : p.by}
+            </span>
+            <span
+              className={`font-impact text-3xl drop-shadow-[0_0_8px_rgba(255,200,0,0.7)] ${
+                p.mine ? 'text-yellow-300' : 'text-sky-300'
+              }`}
+            >
               +{p.value.toLocaleString()}
             </span>
             {p.meaning && (
@@ -403,9 +476,6 @@ export default function BattleGame({
             )}
           </motion.div>
         ))}
-
-        {/* 상대가 자기 필드 단어를 깰 때 화면을 가로지르는 별똥별(연출) */}
-        <MeteorLayer meteors={meteors} />
       </div>
 
       {/* 하단 — 아이템덱 + 효과 + 양분 입력 */}
@@ -520,15 +590,37 @@ export default function BattleGame({
             )}
           </div>
           <div
-            className="w-1/2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-center flex items-center justify-center min-h-[2.75rem]"
+            className="relative w-1/2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-center flex items-center justify-center min-h-[2.75rem]"
             aria-hidden
           >
+            {/* 상대가 단어 성공 시 상대 입력칸 둘레 깜빡(수정요청5) */}
+            <AnimatePresence>
+              {oppInputFxKey > 0 && (
+                <motion.span
+                  key={oppInputFxKey}
+                  initial={{ opacity: 0.7, scale: 0.85 }}
+                  animate={{ opacity: 0, scale: 1.25 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="absolute inset-0 rounded-xl ring-2 ring-sky-300/70 pointer-events-none"
+                  aria-hidden
+                />
+              )}
+            </AnimatePresence>
             <span className={`text-lg ${opp.typingWord ? 'font-bold' : 'text-white/30 text-sm'}`}>
               {opp.typingWord ? `${opp.typingWord}…` : `${opp.nickname}의 입력`}
             </span>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="card text-center py-4">
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+      <div className="text-xs text-white/50 mt-1">{label}</div>
     </div>
   );
 }
