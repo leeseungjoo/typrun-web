@@ -5,9 +5,9 @@ import { api } from '../api/client';
 import type { Category } from '../api/types';
 import LiveCounter from '../components/battle/LiveCounter';
 
-// 배틀 실서비스 게이트 — ws.typrun.com 배포 + Phase 3b(점수권위·전적) 완료 후 true.
+// 배틀 실서비스 게이트 — ws.typrun.com(2026-06-15 배포 완료)에 연결. 베타 운영.
 // false 면 배틀 버튼은 '곧 오픈'(비활성)으로 노출되어 죽은 로비로 빠지지 않는다.
-const BATTLE_ENABLED = false;
+const BATTLE_ENABLED = true;
 
 // 리그 선택 → 이 페이지에서 모드(랭킹전 / 배틀2인 / 배틀3인) 선택.
 // 랭킹전만 활성, 배틀은 ws 배포 후 오픈. 상단에 리그별 접속자 카운터.
