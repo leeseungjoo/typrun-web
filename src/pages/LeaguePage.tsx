@@ -64,6 +64,13 @@ export default function LeaguePage() {
           />
         </div>
       )}
+
+      {/* 로비 배너 (카테고리 선택 화면 하단) */}
+      {!load && !err && (
+        <div className="mt-4 flex justify-center">
+          <BannerSlot slot="lobby" />
+        </div>
+      )}
     </div>
   );
 }

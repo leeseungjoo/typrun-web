@@ -61,6 +61,16 @@ export default function MainPage() {
           </button>
         </motion.div>
 
+        {/* 메인 배너 (히어로 하단) */}
+        <div className="w-full max-w-[400px] mt-6">
+          <BannerSlot slot="main" isMember={!!user} />
+        </div>
+
+        {/* 메인 배너 (히어로 하단) */}
+        <div className="w-full max-w-[400px] mt-6">
+          <BannerSlot slot="main" isMember={!!user} />
+        </div>
+
         {/* 비로그인 안내 */}
         {!user && !loading && (
           <p className="text-sm text-white/90 mt-5 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
