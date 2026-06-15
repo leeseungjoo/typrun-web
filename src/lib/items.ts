@@ -41,6 +41,7 @@ export const BOOSTER_MULTIPLIER = 10;
 export const SLOW_FACTOR = 0.4;
 export const SPEEDUP_FACTOR = 1.5;
 export const BOMB_SCORE_PER_WORD = 50;
+export const BOMB_MAX = 5; // 폭탄: 화면 단어 중 랜덤 최대 N개만 터뜨림(수정요청: 전체 X)
 export const TIME_EXTEND_SEC = 10;
 export const SNIPE_BONUS = 100;
 export const COMBO_BOOST = 5;
@@ -51,7 +52,7 @@ export const ITEM_POOL: ItemDef[] = [
   { effect: 'slow_motion',  name: '슬로우',     icon: '🐢',   slot: true,  positive: true,  weight: 10, hint: '6초간 낙하 60% 감속' },
   { effect: 'freeze',       name: '프리즈',     icon: '🧊',   slot: true,  positive: true,  weight: 7,  hint: '3초간 모두 정지' },
   { effect: 'booster',      name: '부스터',     icon: '⚡',   slot: false, positive: true,  weight: 8,  hint: '10초간 점수 x10 (즉시 발동)' },
-  { effect: 'clear_all',    name: '폭탄',       icon: '💣',   slot: true,  positive: true,  weight: 6,  hint: '화면 단어 모두 폭파 (단어당 +50)' },
+  { effect: 'clear_all',    name: '폭탄',       icon: '💣',   slot: true,  positive: true,  weight: 6,  hint: '화면 단어 랜덤 최대 5개 폭파 (단어당 +50)' },
   { effect: 'time_extend',  name: '시간연장',   icon: '⏰',   slot: true,  positive: true,  weight: 6,  hint: '게임 시간 +10초' },
   { effect: 'shield',       name: '방어막',     icon: '🛡',   slot: true,  positive: true,  weight: 7,  hint: '다음 miss 1회 무효' },
   { effect: 'snipe',        name: '저격',       icon: '🎯',   slot: true,  positive: true,  weight: 6,  hint: '가장 아래 단어 1개 즉시 폭파 (+100)' },

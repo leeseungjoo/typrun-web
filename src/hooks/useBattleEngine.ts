@@ -15,6 +15,7 @@ import {
   SLOW_FACTOR,
   SPEEDUP_FACTOR,
   BOMB_SCORE_PER_WORD,
+  BOMB_MAX,
   TIME_EXTEND_SEC,
   SNIPE_BONUS,
   COMBO_BOOST,
@@ -48,6 +49,14 @@ export interface ClearEvent {
   elapsedMs: number;
 }
 
+// 단어폭주(word_burst)로 추가되는 단어 — 양쪽 동일 적용 위해 id/word seq/위치/속도를 중계.
+export interface BurstAdd {
+  id: number;
+  wordSeq: number;
+  x: number;
+  speed: number;
+}
+
 export interface BattleStats {
   score: number;
   maxCombo: number;
@@ -63,6 +72,9 @@ export interface UseBattleEngineOpts {
   onClear?: (e: ClearEvent) => void; // 공유 단어 클리어(상대 미러 갱신용 중계)
   onClearedFx?: (x: number, y: number, gain: number, meaning?: string) => void; // 내가 깬 자리 인플레이스 점수 팝업용
   onSyncEffect?: (effect: ItemEffect) => void; // slow/freeze/speedup 양쪽 동기화 relay(공유필드)
+  // 공유필드: 단어 추가/제거 아이템(폭탄·저격·단어폭주)을 양쪽 화면에 동일 적용하기 위한 중계.
+  onMutate?: (op: 'bomb' | 'snipe' | 'burst', payload: { ids?: number[]; adds?: BurstAdd[] }) => void;
+  attackIdBase?: number; // word_burst 음수 id 시작점(플레이어별 유니크 → 양쪽 id 충돌 방지)
   onAttack?: (effect: ItemEffect) => void; // negative 아이템 → 상대에게 발사
   onTyping?: (spawnIndex: number, len: number) => void; // 실시간 입력 진행(상대 표시용)
   onMiss?: (hp: number) => void;
@@ -183,13 +195,25 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
           sound.play('combo');
           break;
         case 'clear_all': {
-          const cleared = activeRef.current;
-          const bonus = cleared.length * BOMB_SCORE_PER_WORD;
-          setActive([]);
-          setScore((s) => s + bonus);
-          setCorrect((c) => c + cleared.length);
+          // 폭탄: 화면 단어 중 랜덤 최대 BOMB_MAX개만 터뜨림. 양쪽 동기화 위해 제거 id 중계.
+          const shuffled = [...activeRef.current];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          const pick = shuffled.slice(0, BOMB_MAX);
+          if (pick.length === 0) {
+            sound.play('wrong');
+            break;
+          }
+          const ids = pick.map((a) => a.id);
+          const idSet = new Set(ids);
+          setActive((prev) => prev.filter((a) => !idSet.has(a.id)));
+          setScore((s) => s + pick.length * BOMB_SCORE_PER_WORD);
+          setCorrect((c) => c + pick.length);
           sound.play('combo');
           sound.play('hit');
+          if (!fromRemote) cbRef.current.onMutate?.('bomb', { ids });
           break;
         }
         case 'time_extend':
@@ -212,6 +236,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
           setScore((s) => s + SNIPE_BONUS);
           setCorrect((c) => c + 1);
           sound.play('hit');
+          if (!fromRemote) cbRef.current.onMutate?.('snipe', { ids: [target.id] }); // 양쪽 동기화
           break;
         }
         case 'combo_boost': {
@@ -246,6 +271,12 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
           }
           setActive((prev) => [...prev, ...fresh]);
           sound.play('wrong');
+          // 양쪽 동일 추가: 생성한 단어(id/seq/위치/속도)를 그대로 중계.
+          if (!fromRemote) {
+            cbRef.current.onMutate?.('burst', {
+              adds: fresh.map((a) => ({ id: a.id, wordSeq: a.word.seq, x: a.x, speed: a.speed })),
+            });
+          }
           break;
         }
         case 'combo_break':
@@ -277,7 +308,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     // (재)시작 완전 초기화 — spawnIndex 0부터여야 클라 간 결정성 유지.
     finishedRef.current = false;
     spawnIndexRef.current = 0;
-    attackIdRef.current = -1;
+    attackIdRef.current = cbRef.current.attackIdBase ?? -1; // 플레이어별 유니크 음수 시작 → 양쪽 burst id 충돌 방지
     lastHitAtRef.current = 0;
     lastTypingRef.current = { idx: -1, len: 0 };
     setActive([]);
@@ -478,10 +509,10 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
       const item = hit.item;
       setLastItem({ id: ++localIdRef.current, item });
       if (!item.positive) {
-        if (item.effect === 'speedup') {
-          applyEffect(item.effect); // 공유필드: 가속은 양쪽 동기화(applyEffect 가 relay)
+        if (item.effect === 'speedup' || item.effect === 'word_burst') {
+          applyEffect(item.effect); // 공유필드: 가속·단어폭주는 양쪽 동기화(applyEffect 내부서 relay)
         } else {
-          cbRef.current.onAttack?.(item.effect); // 그 외 공격(블러/단어폭주/콤보붕괴)은 상대에게
+          cbRef.current.onAttack?.(item.effect); // 그 외 공격(블러/콤보붕괴)은 상대에게
         }
       } else if (item.slot) {
         setInventory((prev) => {
@@ -593,6 +624,33 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     applyEffect(effect, true);
   }, [applyEffect]);
 
+  // 공유필드 미러: 상대가 폭탄/저격으로 제거한 단어들을 내 화면에서도 제거(점수 없음).
+  const removeByIds = useCallback((ids: number[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setActive((prev) => prev.filter((a) => !idSet.has(a.id)));
+    sound.play('hit');
+  }, []);
+
+  // 공유필드 미러: 상대가 단어폭주로 추가한 단어들을 내 화면에도 동일 추가(같은 id/seq/위치).
+  const addWordsRemote = useCallback(
+    (adds: BurstAdd[]) => {
+      if (!adds || adds.length === 0) return;
+      setActive((prev) => {
+        const have = new Set(prev.map((a) => a.id));
+        const fresh: BattleActiveWord[] = [];
+        for (const ad of adds) {
+          if (have.has(ad.id)) continue;
+          const w = pool.find((p) => p.seq === ad.wordSeq);
+          if (w) fresh.push({ id: ad.id, word: w, x: ad.x, y: 0, speed: ad.speed });
+        }
+        return fresh.length ? [...prev, ...fresh] : prev;
+      });
+      sound.play('wrong');
+    },
+    [pool],
+  );
+
   const timeLeft = Math.max(0, Math.ceil(durationSec + bonusTime - elapsed));
 
   return {
@@ -622,5 +680,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     finishNow,
     removeWord,
     applySyncEffect,
+    removeByIds,
+    addWordsRemote,
   };
 }

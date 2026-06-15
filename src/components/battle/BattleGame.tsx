@@ -114,6 +114,7 @@ export default function BattleGame({
   const eng = useBattleEngine({
     pool: pool ?? [],
     matchSeed,
+    attackIdBase: -1 - you * 1_000_000, // 플레이어별 유니크 burst id 범위 → 양쪽 화면 id 충돌 방지
     durationSec: MATCH_DURATION_SEC,
     // 결과/집계 화면 진입 시 엔진 정지 — 단어 낙하·미스 사운드가 백그라운드에서 계속되지 않게.
     running: running && !!pool && pool.length > 0 && !awaiting && !result,
@@ -130,6 +131,10 @@ export default function BattleGame({
     onSyncEffect: (effect) => {
       // 공유필드: 거북이/멈춤/가속을 상대 필드에도 적용시키기 위해 중계.
       socket.send({ t: 'effect:sync', matchId, effect });
+    },
+    onMutate: (op, payload) => {
+      // 공유필드: 폭탄/저격(단어 제거)·단어폭주(추가)를 상대 필드에도 동일 적용하도록 중계.
+      socket.send({ t: 'field:mutate', matchId, op, ids: payload.ids, adds: payload.adds });
     },
     onAttack: (effect) => {
       socket.send({ t: 'item:used', matchId, effect });
@@ -152,7 +157,7 @@ export default function BattleGame({
     },
   });
 
-  const { applyIncomingEffect, finishNow, removeWord, applySyncEffect } = eng;
+  const { applyIncomingEffect, finishNow, removeWord, applySyncEffect, removeByIds, addWordsRemote } = eng;
 
   // 내 점수/콤보/생명을 상대 미러로 주기 동기화.
   const engStateRef = useRef({ score: 0, combo: 0, hp: INITIAL_HP });
@@ -196,6 +201,10 @@ export default function BattleGame({
       } else if (msg.t === 'opponent:effect') {
         // 공유필드: 상대가 발동한 거북이/멈춤/가속을 내 필드에도 적용.
         applySyncEffect(msg.effect as ItemEffect);
+      } else if (msg.t === 'opponent:mutate') {
+        // 공유필드: 상대의 폭탄/저격(제거)·단어폭주(추가)를 내 필드에도 동일 적용.
+        if (msg.op === 'burst') addWordsRemote(msg.adds ?? []);
+        else removeByIds(msg.ids ?? []);
       } else if (msg.t === 'opponent:typing') {
         const pl = poolRef.current;
         if (pl && pl.length > 0 && msg.spawnIndex >= 0) {
@@ -234,7 +243,7 @@ export default function BattleGame({
       }
     });
     return off;
-  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow, removeWord, applySyncEffect]);
+  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow, removeWord, applySyncEffect, removeByIds, addWordsRemote]);
 
   // 게임 중 아무 키나 누르면 입력칸 포커스 유지.
   useEffect(() => {
