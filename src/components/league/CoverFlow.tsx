@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Category } from '../../api/types';
 
@@ -25,8 +25,9 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
   const startX = useRef(0);
   const moved = useRef(false);
 
-  // 컨테이너 폭 추적 → 반응형 카드/간격
-  useEffect(() => {
+  // 컨테이너 폭 추적 → 반응형 카드/간격. 첫 페인트 전에 측정(useLayoutEffect)해야
+  // 카드가 폭 변화로 미끄러지지(튀지) 않는다 — 카드는 w>0 일 때만 마운트.
+  useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => setW(entries[0].contentRect.width));
@@ -87,7 +88,9 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        {items.map((cat, i) => {
+        {/* w 측정 후에만 마운트 → 첫 프레임부터 올바른 간격(폭 변화로 미끄러지지 않음).
+            initial opacity:0 → 제자리에서 알파 0→1 페이드인(위치 슬라이드 없음, 사용자 요청). */}
+        {w > 0 && items.map((cat, i) => {
           const off = i - active;
           const abs = Math.abs(off);
           const dir = Math.sign(off);
@@ -105,6 +108,7 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
                 transformStyle: 'preserve-3d',
                 pointerEvents: visible ? 'auto' : 'none',
               }}
+              initial={{ opacity: 0 }}
               animate={{
                 x: off * spacing,
                 z: -abs * 70,
@@ -117,7 +121,7 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
                     ? 'brightness(1) blur(0px)'
                     : `brightness(${abs === 1 ? 0.62 : 0.46}) blur(${abs === 1 ? 1.6 : 3.4}px)`,
               }}
-              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 30, opacity: { duration: 0.4, ease: 'easeOut' } }}
               onClick={() => {
                 if (moved.current) return;
                 if (i !== active) {
