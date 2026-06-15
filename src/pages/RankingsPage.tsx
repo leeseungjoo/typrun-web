@@ -22,9 +22,13 @@ function relativeTime(input: string): string {
   return new Date(ts).toLocaleDateString('ko-KR');
 }
 
+type View = 'score' | 'battle';
+
 export default function RankingsPage() {
   const { categorySeq } = useParams();
   const nav = useNavigate();
+
+  const [view, setView] = useState<View>('score');
 
   // 운영중(active/ended) 랭킹 리그 목록 — 페이징 대상
   const [leagues, setLeagues] = useState<Category[]>([]);
@@ -100,77 +104,97 @@ export default function RankingsPage() {
   }, [current]);
 
   return (
-    <div className="min-h-screen px-6 pt-16 pb-8 max-w-3xl mx-auto">
-
+    <div className="min-h-screen px-5 pt-16 pb-8 max-w-3xl mx-auto">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-5">
-        <button className="text-white/60 hover:text-white" onClick={() => nav('/league')}>
-          ← 리그
+      <div className="flex items-center justify-between mb-4">
+        <button className="text-white/60 hover:text-white" onClick={() => nav('/')} aria-label="홈으로">
+          ← 홈
         </button>
-        <h2 className="text-2xl font-bold">🏆 랭킹</h2>
+        <h2 className="text-2xl font-bold tracking-tight">🏆 랭킹</h2>
         <button
           onClick={() => setReloadKey((k) => k + 1)}
-          className="text-white/60 hover:text-white"
+          className="text-white/60 hover:text-white text-lg"
           title="새로고침"
+          aria-label="새로고침"
         >
           ↻
         </button>
       </div>
 
-      {/* 리그 페이저 */}
-      {leagues.length > 0 && current && (
-        <div className="card mb-4 flex items-center justify-between gap-3">
-          <button
-            disabled={!canPrev}
-            onClick={() => setIdx((i) => Math.max(0, i - 1))}
-            className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
-            aria-label="이전 리그"
-          >
-            ◀
-          </button>
-          <div className="text-center min-w-0">
-            <div className="text-xs text-white/40 tracking-wider mb-0.5">
-              리그 {idx + 1} / {leagues.length}
-              {current.status === 'ended' && (
-                <span className="ml-2 px-1.5 py-0.5 rounded bg-white/10 text-white/60">종료</span>
-              )}
-            </div>
-            <div className="text-lg font-bold truncate">{current.name}</div>
-            {scoreMeta?.start && scoreMeta?.end && (
-              <div className="text-[11px] text-white/45 mt-0.5">
-                🗓 {scoreMeta.mode === 'event' ? '이벤트 집계' : '시즌'} {scoreMeta.start} ~ {scoreMeta.end}
+      {/* 뷰 탭 — 점수 / 배틀 */}
+      <div className="mx-auto mb-5 flex w-full max-w-xs rounded-full border border-white/15 bg-white/5 p-1">
+        <RankTab active={view === 'score'} onClick={() => setView('score')} label="🏅 점수" />
+        <RankTab active={view === 'battle'} onClick={() => setView('battle')} label="⚔️ 배틀" />
+      </div>
+
+      {view === 'score' ? (
+        <>
+          {/* 리그 페이저 */}
+          {leagues.length > 0 && current && (
+            <div className="card mb-4 flex items-center justify-between gap-3">
+              <button
+                disabled={!canPrev}
+                onClick={() => setIdx((i) => Math.max(0, i - 1))}
+                className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
+                aria-label="이전 리그"
+              >
+                ◀
+              </button>
+              <div className="text-center min-w-0">
+                <div className="text-xs text-white/40 tracking-wider mb-0.5">
+                  리그 {idx + 1} / {leagues.length}
+                  {current.status === 'ended' && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded bg-white/10 text-white/60">종료</span>
+                  )}
+                </div>
+                <div className="text-lg font-bold truncate">{current.name}</div>
+                {scoreMeta?.start && scoreMeta?.end && (
+                  <div className="text-[11px] text-white/45 mt-0.5">
+                    🗓 {scoreMeta.mode === 'event' ? '이벤트 집계' : '시즌'} {scoreMeta.start} ~ {scoreMeta.end}
+                  </div>
+                )}
               </div>
+              <button
+                disabled={!canNext}
+                onClick={() => setIdx((i) => Math.min(leagues.length - 1, i + 1))}
+                className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
+                aria-label="다음 리그"
+              >
+                ▶
+              </button>
+            </div>
+          )}
+
+          {eventBanner}
+
+          {leagues.length === 0 && !scoreErr && (
+            <div className="text-center py-16 text-white/50">운영 중인 랭킹 리그가 없어요.</div>
+          )}
+
+          {current && (
+            <ScoreRankings
+              rows={rows}
+              load={scoreLoad}
+              err={scoreErr}
+              onRetry={() => setReloadKey((k) => k + 1)}
+              onPlay={() => nav(`/game/${current.seq}`)}
+              onSelect={setDetail}
+            />
+          )}
+
+          {/* 하단 액션 */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+            {current && (
+              <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
+                🎮 도전하기
+              </button>
             )}
+            <button className="btn-ghost" onClick={() => nav('/league')}>리그 선택</button>
+            <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 문의</button>
           </div>
-          <button
-            disabled={!canNext}
-            onClick={() => setIdx((i) => Math.min(leagues.length - 1, i + 1))}
-            className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
-            aria-label="다음 리그"
-          >
-            ▶
-          </button>
-        </div>
-      )}
-
-      {/* 이벤트 안내 배너 */}
-      {eventBanner}
-
-      {/* 리그 없음 */}
-      {leagues.length === 0 && !scoreErr && (
-        <div className="text-center py-16 text-white/50">운영 중인 랭킹 리그가 없어요.</div>
-      )}
-
-      {/* ===== 점수 랭킹 ===== */}
-      {current && (
-        <ScoreRankings
-          rows={rows}
-          load={scoreLoad}
-          err={scoreErr}
-          onRetry={() => setReloadKey((k) => k + 1)}
-          onPlay={() => nav(`/game/${current.seq}`)}
-          onSelect={setDetail}
-        />
+        </>
+      ) : (
+        <BattleRankingsBeta onLeague={() => nav('/league')} />
       )}
 
       {/* 상세 모달 */}
@@ -182,17 +206,52 @@ export default function RankingsPage() {
       <AnimatePresence>
         {showContact && <ContactModal onClose={() => setShowContact(false)} />}
       </AnimatePresence>
+    </div>
+  );
+}
 
-      {/* 하단 액션 */}
-      <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-        {current && (
-          <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
-            🎮 도전하기
-          </button>
-        )}
-        <button className="btn-ghost" onClick={() => nav('/league')}>리그 선택</button>
-        <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 문의</button>
+/* ============================ 뷰 탭 ============================ */
+
+function RankTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex-1 px-4 py-2 rounded-full text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
+        active ? 'bg-white text-ink shadow' : 'text-white/65 hover:text-white'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+/* ====================== 배틀 랭킹(베타 — 집계 준비중) ====================== */
+
+function BattleRankingsBeta({ onLeague }: { onLeague: () => void }) {
+  return (
+    <div className="card text-center py-12">
+      <div className="text-5xl mb-3" aria-hidden>⚔️</div>
+      <p className="text-lg font-bold mb-1">배틀 랭킹 준비 중</p>
+      <p className="text-sm text-white/55 leading-relaxed mb-6">
+        실시간 배틀은 베타예요. 전적·승률 집계가 곧 시작돼요.<br />
+        지금 배틀에 참여하면 집계 시작과 함께 순위에 반영돼요.
+      </p>
+      <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-6">
+        {[
+          { k: '플레이어', v: '–' },
+          { k: '오늘 매치', v: '–' },
+          { k: '집계 시작', v: '곧' },
+        ].map((s) => (
+          <div key={s.k} className="rounded-xl border border-white/10 bg-white/5 py-3">
+            <div className="font-impact text-2xl leading-none">{s.v}</div>
+            <div className="text-[11px] text-white/45 mt-1">{s.k}</div>
+          </div>
+        ))}
       </div>
+      <button className="btn-primary" onClick={onLeague}>
+        ⚔️ 배틀하러 가기
+      </button>
     </div>
   );
 }

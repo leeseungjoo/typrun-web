@@ -79,9 +79,9 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
 
   return (
     <div ref={wrapRef} className="w-full select-none">
-      {/* 무대 */}
+      {/* 무대 — 양옆으로 길게 늘어진 카드가 가로 스크롤을 만들지 않게 클립 */}
       <div
-        className="relative mx-auto touch-pan-y"
+        className="relative mx-auto touch-pan-y overflow-hidden"
         style={{ height: cardH + 24, perspective: 1100 }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -111,7 +111,11 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
                 rotateY: off === 0 ? 0 : -dir * 44,
                 scale: off === 0 ? 1 : 0.82,
                 opacity: visible ? 1 : 0,
-                filter: off === 0 ? 'brightness(1)' : 'brightness(0.55)',
+                // 원근감: 거리에 따라 밝기↓ + 흐림↑ (가운데만 또렷·밝음)
+                filter:
+                  off === 0
+                    ? 'brightness(1) blur(0px)'
+                    : `brightness(${abs === 1 ? 0.62 : 0.46}) blur(${abs === 1 ? 1.6 : 3.4}px)`,
               }}
               transition={{ type: 'spring', stiffness: 260, damping: 30 }}
               onClick={() => {
@@ -187,8 +191,8 @@ function CoverCard({
 
   return (
     <div
-      className={`relative w-full h-full rounded-2xl border overflow-hidden flex flex-col p-5 shadow-[0_18px_40px_rgba(0,0,0,0.45)] ${
-        isCenter ? 'border-white/30 bg-white/[0.07]' : 'border-white/15 bg-white/[0.04]'
+      className={`relative w-full h-full rounded-2xl border overflow-hidden flex flex-col p-5 shadow-[0_18px_40px_rgba(0,0,0,0.5)] ${
+        isCenter ? 'border-white/35 bg-[#211c3f]' : 'border-white/12 bg-[#191430]'
       }`}
       style={{ backfaceVisibility: 'hidden' }}
     >

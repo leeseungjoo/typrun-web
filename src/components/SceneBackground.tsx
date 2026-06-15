@@ -1,40 +1,36 @@
 import { useMemo } from 'react';
 
 /**
- * 전 페이지 공통 배경 — 심플 그라데이션 + 은은한 별 반짝임(기획 2026-06-15).
- * 별은 화면에 고르게 퍼지도록 셀 격자 + 셀 내 지터로 배치. opacity/transform 만 애니메이션(가벼움).
- * prefers-reduced-motion 이면 반짝임은 멈추고 은은히 켜진 상태 유지(index.css).
+ * 전 페이지 공통 배경 — 심플 그라데이션 + 위에서 아래로 떨어지는 별비(기획 2026-06-15).
+ * 각 별은 화면 위(-12vh)에서 아래(112vh)로 등속 낙하 후 무한 반복. 음수 delay 로 첫 프레임부터 화면을 채운다.
+ * transform/opacity 만 애니메이션(가벼움). prefers-reduced-motion 이면 낙하 정지(index.css).
  */
-const STAR_COUNT = 70;
+const STAR_COUNT = 80;
 
 interface Star {
-  top: number; // %
   left: number; // %
+  rest: number; // % (동작 줄이기 시 고정 위치)
   size: number; // px
-  dur: number; // s
-  delay: number; // s
-  min: number;
-  max: number;
+  dur: number; // s (낙하 시간 — 클수록 천천히)
+  delay: number; // s (음수: 사이클 중간에서 시작 → 첫 프레임부터 분포)
+  max: number; // 최대 밝기(0~1)
+  glow: boolean; // 큰 별은 은은한 발광
 }
 
 function buildStars(): Star[] {
-  // 고른 분포: 격자 셀마다 1개 + 셀 안에서 랜덤 지터.
-  const cols = 10;
-  const rows = Math.ceil(STAR_COUNT / cols);
   const stars: Star[] = [];
   for (let i = 0; i < STAR_COUNT; i++) {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    const cellW = 100 / cols;
-    const cellH = 100 / rows;
+    const big = Math.random() < 0.16;
+    const size = big ? 2.5 + Math.random() * 1.3 : Math.random() < 0.5 ? 1.5 : 1;
+    const dur = 7 + Math.random() * 9; // 7~16s
     stars.push({
-      left: c * cellW + Math.random() * cellW,
-      top: r * cellH + Math.random() * cellH,
-      size: Math.random() < 0.18 ? 2.5 : Math.random() < 0.5 ? 1.5 : 1,
-      dur: 2.4 + Math.random() * 3.6,
-      delay: Math.random() * 4,
-      min: 0.08 + Math.random() * 0.12,
+      left: Math.random() * 100,
+      rest: Math.random() * 100,
+      size,
+      dur,
+      delay: -Math.random() * dur, // 음수 delay 로 초기 분포
       max: 0.5 + Math.random() * 0.45,
+      glow: big,
     });
   }
   return stars;
@@ -58,15 +54,15 @@ export default function SceneBackground() {
           key={i}
           className="tw-star"
           style={{
-            top: `${s.top}%`,
             left: `${s.left}%`,
             width: `${s.size}px`,
             height: `${s.size}px`,
-            // CSS 변수로 별마다 개별 반짝임 파라미터 전달
+            boxShadow: s.glow ? '0 0 6px 1px rgba(255,255,255,0.55)' : undefined,
+            // CSS 변수로 별마다 개별 낙하 파라미터 전달
             ['--tw-dur' as string]: `${s.dur}s`,
             ['--tw-delay' as string]: `${s.delay}s`,
-            ['--tw-min' as string]: `${s.min}`,
             ['--tw-max' as string]: `${s.max}`,
+            ['--tw-rest' as string]: `${s.rest}%`,
           }}
         />
       ))}

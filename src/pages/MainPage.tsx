@@ -52,8 +52,8 @@ export default function MainPage() {
           <button className="cta-btn" onClick={() => nav('/league')}>
             게임 시작하기
           </button>
-          <button className="line-btn py-4 text-lg" onClick={() => nav('/league')}>
-            리그선택 / 랭킹 보기
+          <button className="line-btn py-4 text-lg" onClick={() => nav('/rankings')}>
+            랭킹 보기
           </button>
           <button className="line-btn py-3.5 text-base" onClick={() => setContactOpen(true)}>
             <span className="text-white/70">아이디어 / </span>

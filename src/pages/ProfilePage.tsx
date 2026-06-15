@@ -373,6 +373,34 @@ export default function ProfilePage() {
 
         {/* ===== 오른쪽 컬럼 ===== */}
         <div className="space-y-6">
+          {/* 배틀 전적 카드 (베타 — 집계 준비중) */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.035 }}
+            className="card"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs text-white/40 tracking-wider">⚔️ 배틀 전적</div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
+                베타
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <BattleStat label="전적" value="0" />
+              <BattleStat label="승" value="0" valueCls="text-emerald-300" />
+              <BattleStat label="패" value="0" valueCls="text-red-300" />
+              <BattleStat label="무" value="0" />
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+              <span className="text-xs text-white/45">승률</span>
+              <span className="font-bold tabular-nums text-white/70">–</span>
+            </div>
+            <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
+              배틀 전적 집계는 곧 시작돼요(베타). 지금 배틀에 참여하면 집계 시작과 함께 반영됩니다.
+            </p>
+          </motion.div>
+
           {/* 참여 이력 카드 (최근 30판) */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -492,6 +520,15 @@ function Stat({ label, value }: { label: string; value: string | number }) {
     <div>
       <div className="text-xs text-white/40 tracking-wider">{label}</div>
       <div className="text-lg font-bold tabular-nums mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function BattleStat({ label, value, valueCls = '' }: { label: string; value: string | number; valueCls?: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 py-2.5">
+      <div className={`font-impact text-2xl leading-none ${valueCls}`}>{value}</div>
+      <div className="text-[11px] text-white/45 mt-1">{label}</div>
     </div>
   );
 }

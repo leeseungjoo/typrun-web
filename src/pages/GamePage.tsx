@@ -5,7 +5,6 @@ import { api } from '../api/client';
 import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
-import ScrollingGround from '../components/ScrollingGround';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -223,9 +222,9 @@ export default function GamePage() {
       .catch((e) => setErr(String(e)));
   }, [categorySeq]);
 
-  // 랭킹전: 시작 버튼 없이 5초 카운트 후 자동 시작(기획 2026-06-15). 연습/생초보는 수동 시작 유지.
+  // 모든 모드: 시작 버튼 없이 5초 카운트(5,4,3,2,1) 후 자동 시작(기획 2026-06-15 수정요청3).
   useEffect(() => {
-    if (phase !== 'ready' || isPractice) {
+    if (phase !== 'ready') {
       setReadyCountdown(null);
       return;
     }
@@ -243,7 +242,7 @@ export default function GamePage() {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [phase, isPractice]);
+  }, [phase]);
 
   // 게임 루프
   useEffect(() => {
@@ -640,7 +639,6 @@ export default function GamePage() {
             )}
           </div>
         )}
-        <p className="text-white/60">단어 {words.length}개 로드됨</p>
         {isSuperBeginner ? (
           <div className="px-4 py-2 rounded-xl bg-sky-500/15 border border-sky-400/40 text-sky-200 text-sm text-center">
             🐣 생초보 모드 · 아주 천천히 · 단어도 드물게 · 생명 5개 · 글자 위치부터 천천히!
@@ -650,24 +648,12 @@ export default function GamePage() {
             🌱 연습 리그 · 천천히 떨어져요 · 생명 5개 · 랭킹 미집계
           </div>
         )}
-        {isPractice ? (
-          <button
-            className="btn-primary text-lg"
-            onClick={() => {
-              sound.play('start');
-              setPhase('playing');
-            }}
-          >
-            시작!
-          </button>
-        ) : (
-          <div className="flex flex-col items-center gap-1" role="status" aria-live="polite">
-            <span className="text-7xl font-impact text-violet-200 tabular-nums leading-none" aria-hidden>
-              {readyCountdown ?? 5}
-            </span>
-            <span className="text-sm text-white/60">초 후 자동 시작!</span>
-          </div>
-        )}
+        <div className="flex flex-col items-center gap-1" role="status" aria-live="polite">
+          <span className="text-7xl font-impact text-violet-200 tabular-nums leading-none" aria-hidden>
+            {readyCountdown ?? 5}
+          </span>
+          <span className="text-sm text-white/60">초 후 자동 시작!</span>
+        </div>
         <button className="btn-ghost text-sm" onClick={() => nav('/league')}>
           ← 리그 선택
         </button>
@@ -986,11 +972,8 @@ export default function GamePage() {
         ))}
       </div>
 
-      {/* 가로 스크롤 땅 — 입력창 바로 위, 화면 전체 폭(러너 느낌) */}
-      <ScrollingGround durationSec={isSuperBeginner ? 12 : isPractice ? 9 : 6} />
-
       {/* Input + 좌우 네비 버튼 (로그인 · 홈) */}
-      <div className="relative px-6 py-4 mb-[10px] bg-black/30 flex items-center justify-center gap-3">
+      <div className="relative px-6 py-4 mb-[10px] border-t border-white/10 bg-black/30 flex items-center justify-center gap-3">
         {eventTitle && (
           <button
             type="button"

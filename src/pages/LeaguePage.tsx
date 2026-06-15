@@ -11,7 +11,7 @@ export default function LeaguePage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [load, setLoad] = useState(true);
-  const [tab, setTab] = useState<Tab>('practice');
+  const [tab, setTab] = useState<Tab>('ranking'); // 디폴트: 랭킹 리그(수정요청3)
 
   useEffect(() => {
     api
@@ -43,10 +43,10 @@ export default function LeaguePage() {
         {tab === 'practice' ? '천천히 연습하고 실력을 키워요' : '매월 1일 초기화 · 전국 랭킹에 도전'}
       </p>
 
-      {/* 카테고리 탭 — 연습 / 랭킹 */}
+      {/* 카테고리 탭 — 랭킹(기본) / 연습 */}
       <div className="mx-auto mb-8 inline-flex rounded-full border border-white/15 bg-white/5 p-1">
-        <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label="🌱 연습 리그" count={practice.length} />
         <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label="🏅 랭킹 리그" count={ranking.length} />
+        <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label="🌱 연습 리그" count={practice.length} />
       </div>
 
       {load && <p className="text-center text-white/50">불러오는 중...</p>}

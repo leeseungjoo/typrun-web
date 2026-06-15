@@ -27,68 +27,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 배경 별 반짝임 (장식, SceneBackground) — compositor 친화(opacity/transform)만 애니메이션 */
-@keyframes tw-twinkle {
-  0%, 100% { opacity: var(--tw-min, 0.15); transform: scale(0.8); }
-  50% { opacity: var(--tw-max, 0.9); transform: scale(1); }
+/* 배경 별비 — 위에서 아래로 떨어지는 별(전 페이지, SceneBackground). transform/opacity 만 애니메이션(가벼움) */
+@keyframes star-fall {
+  0% { transform: translate3d(0, -12vh, 0); opacity: 0; }
+  12% { opacity: var(--tw-max, 0.85); }
+  88% { opacity: var(--tw-max, 0.85); }
+  100% { transform: translate3d(0, 112vh, 0); opacity: 0; }
 }
 .tw-star {
   position: absolute;
+  top: 0;
   border-radius: 9999px;
   background: #fff;
-  will-change: opacity, transform;
-  animation: tw-twinkle var(--tw-dur, 3s) ease-in-out infinite;
+  will-change: transform, opacity;
+  animation: star-fall var(--tw-dur, 9s) linear infinite;
   animation-delay: var(--tw-delay, 0s);
 }
 @media (prefers-reduced-motion: reduce) {
-  .tw-star { animation: none; opacity: 0.4; }
-}
-
-/* 게임 하단 스크롤 땅(ScrollingGround) — 러너 느낌의 가로 무한 스크롤 띠 */
-.ground-band {
-  position: relative;
-  width: 100%;
-  height: 40px;
-  overflow: hidden;
-  /* 윗면 풀/흙 경계 하이라이트 */
-  border-top: 2px solid rgba(110, 231, 183, 0.55); /* emerald-300 */
-  box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.45);
-}
-.ground-track {
-  display: flex;
-  width: 200%;
-  height: 100%;
-  will-change: transform;
-  animation-name: ground-scroll;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-.ground-tile {
-  width: 50%;
-  height: 100%;
-  /* 흙 베이스 + 자갈/이랑 반복 텍스처 (배경 톤과 어울리는 보랏빛 흙) */
-  background-color: #211c3a;
-  background-image:
-    /* 작은 자갈 점 */
-    radial-gradient(circle at 12% 60%, rgba(255, 255, 255, 0.08) 0 2px, transparent 3px),
-    radial-gradient(circle at 38% 78%, rgba(255, 255, 255, 0.06) 0 2px, transparent 3px),
-    radial-gradient(circle at 72% 55%, rgba(255, 255, 255, 0.07) 0 2px, transparent 3px),
-    /* 윗면 풀 결 */
-    repeating-linear-gradient(90deg, rgba(110, 231, 183, 0.18) 0 2px, transparent 2px 14px),
-    /* 흙 이랑 음영 */
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 28px),
-    /* 위→아래 그라데이션 */
-    linear-gradient(180deg, #2c2550 0%, #1a1530 100%);
-  background-size: 120px 100%, 120px 100%, 120px 100%, 28px 9px, 28px 100%, 100% 100%;
-  background-repeat: repeat;
-  background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
-}
-@keyframes ground-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ground-track { animation: none; }
+  /* 동작 줄이기: 낙하 정지 + 초기 분포 위치에 은은히 고정 */
+  .tw-star { animation: none; opacity: 0.4; transform: none; top: var(--tw-rest, 30%); }
 }
 
 /* 공용 글로벌 컴포넌트 스타일 — 버튼/카드/인풋 (Figma 디자인 기준) */
