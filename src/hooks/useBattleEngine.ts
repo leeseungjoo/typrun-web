@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { sound } from '../lib/sound';
 import { clearScore } from '../lib/score';
 import { computeSpawn } from '../lib/battleSpawn';
@@ -71,6 +71,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
   const spawnIndexRef = useRef(0);
   const finishedRef = useRef(false);
   const tAccRef = useRef(0); // 루프 누적시간(초) — submit 의 elapsedMs 를 stale state 대신 ref 로 정확히.
+  const gainBySpawnIndexRef = useRef<Map<number, number>>(new Map()); // 내가 낙관적으로 얻은 점수(선착 패배 롤백용)
 
   // 입력 보안 refs
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +99,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     finishedRef.current = false;
     spawnIndexRef.current = 0;
     lastHitAtRef.current = 0;
+    gainBySpawnIndexRef.current.clear();
     setActive([]);
     setScore(0);
     setCombo(0);
@@ -218,6 +220,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     setMaxCombo((m) => Math.max(m, nextCombo));
     setCorrect((c) => c + 1);
     setScore((s) => s + gain);
+    gainBySpawnIndexRef.current.set(hit.id, gain); // 선착 패배 시 롤백용
     lastHitAtRef.current = performance.now();
     sound.play('hit');
     if (nextCombo === 5 || nextCombo === 10 || nextCombo === 20) sound.play('combo');
@@ -282,6 +285,20 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     },
   };
 
+  // 상대가 spawnIndex 를 선착 → 내 필드에서 그 단어 제거(내가 아직 안 깼다면).
+  const removeWord = useCallback((spawnIndex: number) => {
+    setActive((prev) => prev.filter((a) => a.id !== spawnIndex));
+  }, []);
+
+  // 내 낙관적 클리어가 선착 패배 → 점수/정답수 롤백(콤보는 미미해 유지).
+  const rollbackClear = useCallback((spawnIndex: number) => {
+    const g = gainBySpawnIndexRef.current.get(spawnIndex);
+    if (g === undefined) return; // 내가 깬 적 없으면 무시
+    gainBySpawnIndexRef.current.delete(spawnIndex);
+    setScore((s) => Math.max(0, s - g));
+    setCorrect((c) => Math.max(0, c - 1));
+  }, []);
+
   const timeLeft = Math.max(0, Math.ceil(durationSec - elapsed));
 
   return {
@@ -299,5 +316,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     over,
     inputRef,
     bind,
+    removeWord,
+    rollbackClear,
   };
 }

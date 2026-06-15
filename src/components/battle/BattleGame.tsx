@@ -153,13 +153,18 @@ export default function BattleGame({
     },
   });
 
+  const { removeWord, rollbackClear } = eng;
+
   // 상대 이벤트 + 서버 결과 수신 — 풀 로드 여부와 무관하게 항상 구독(준비 전엔 버퍼링).
   useEffect(() => {
     const off = socket.onMessage((msg) => {
       if (msg.t === 'opponent:clear') {
+        removeWord(msg.spawnIndex); // 상대가 선착 → 내 필드에서 그 단어 제거(경쟁형)
         const pl = poolRef.current;
         if (pl && pl.length > 0) applyOppClear(pl, msg.userSeq, msg.spawnIndex, msg.combo);
         else pendingOppRef.current.push({ userSeq: msg.userSeq, spawnIndex: msg.spawnIndex, combo: msg.combo });
+      } else if (msg.t === 'clear:reject') {
+        rollbackClear(msg.spawnIndex); // 내 낙관적 클리어가 선착 패배 → 점수 롤백
       } else if (msg.t === 'match:over') {
         if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
         const mine = msg.results.find((r) => r.userSeq === you);
@@ -169,15 +174,18 @@ export default function BattleGame({
       }
     });
     return off;
-  }, [socket, applyOppClear, you]);
+  }, [socket, applyOppClear, you, removeWord, rollbackClear]);
 
   // 풀 준비되면 버퍼 drain.
   useEffect(() => {
     if (!pool || pool.length === 0 || pendingOppRef.current.length === 0) return;
     const pending = pendingOppRef.current;
     pendingOppRef.current = [];
-    for (const ev of pending) applyOppClear(pool, ev.userSeq, ev.spawnIndex, ev.combo);
-  }, [pool, applyOppClear]);
+    for (const ev of pending) {
+      removeWord(ev.spawnIndex);
+      applyOppClear(pool, ev.userSeq, ev.spawnIndex, ev.combo);
+    }
+  }, [pool, applyOppClear, removeWord]);
 
   // 게임 중 아무 키나 누르면 입력칸 포커스 유지
   useEffect(() => {

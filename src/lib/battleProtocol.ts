@@ -39,6 +39,7 @@ export type ServerMsg =
   | { t: 'match:found'; matchId: string; mode: Mode; matchSeed: number; matchStartTs: number; players: PlayerInfo[]; you: number }
   | { t: 'match:start'; matchId: string; serverTs: number }
   | { t: 'opponent:clear'; userSeq: number; spawnIndex: number; scoreDelta: number; totalScore: number; combo: number; isFirst: boolean; serverTs: number }
+  | { t: 'clear:reject'; spawnIndex: number } // 선착 패배 — 낙관적 클리어 롤백(경쟁형)
   | { t: 'opponent:typing'; userSeq: number; spawnIndex: number; len: number }
   | { t: 'opponent:state'; userSeq: number; score: number; combo: number; hp: number }
   | { t: 'item:used'; userSeq: number; effect: string; targetSeq: number }
