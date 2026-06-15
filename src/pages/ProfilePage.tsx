@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { isSyntheticEmail, containsProfanity, pickProfileImage, authApi } from '../api/auth';
+import { api } from '../api/client';
 import { resizeImage } from '../lib/imageResize';
 import InviteLink from '../components/InviteLink';
-import type { ScoreHistoryEntry } from '../api/types';
+import type { ScoreHistoryEntry, BattleRecordStats } from '../api/types';
 
 const BIO_MAX = 200;
 
@@ -23,6 +24,7 @@ export default function ProfilePage() {
   const [ok, setOk] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<ScoreHistoryEntry[] | null>(null);
+  const [battleStats, setBattleStats] = useState<BattleRecordStats | null>(null); // null=미집계/엔드포인트 미배포 → 베타 표기
   // 비밀번호 변경
   const [curPw, setCurPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -73,6 +75,14 @@ export default function ProfilePage() {
     authApi.myScores(30)
       .then((rows) => setHistory(rows ?? []))
       .catch(() => setHistory([]));
+  }, [user]);
+
+  // 배틀 전적 로드 (엔드포인트 미배포/미집계면 null → 베타 표기 유지)
+  useEffect(() => {
+    if (!user) return;
+    api.myBattleStats()
+      .then(setBattleStats)
+      .catch(() => setBattleStats(null));
   }, [user]);
 
   if (loading || !user) {
@@ -383,22 +393,26 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-3">
               <div className="text-xs text-white/40 tracking-wider">⚔️ 배틀 전적</div>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
-                베타
+                {battleStats && battleStats.matches > 0 ? '이번 시즌' : '베타'}
               </span>
             </div>
             <div className="grid grid-cols-4 gap-2 text-center">
-              <BattleStat label="전적" value="0" />
-              <BattleStat label="승" value="0" valueCls="text-emerald-300" />
-              <BattleStat label="패" value="0" valueCls="text-red-300" />
-              <BattleStat label="무" value="0" />
+              <BattleStat label="전적" value={battleStats?.matches ?? 0} />
+              <BattleStat label="승" value={battleStats?.wins ?? 0} valueCls="text-emerald-300" />
+              <BattleStat label="패" value={battleStats?.losses ?? 0} valueCls="text-red-300" />
+              <BattleStat label="무" value={battleStats?.draws ?? 0} />
             </div>
             <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
               <span className="text-xs text-white/45">승률</span>
-              <span className="font-bold tabular-nums text-white/70">–</span>
+              <span className="font-bold tabular-nums text-white/70">
+                {battleStats && battleStats.matches > 0 ? `${Math.round(battleStats.win_rate)}%` : '–'}
+              </span>
             </div>
-            <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
-              배틀 전적 집계는 곧 시작돼요(베타). 지금 배틀에 참여하면 집계 시작과 함께 반영됩니다.
-            </p>
+            {(!battleStats || battleStats.matches === 0) && (
+              <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
+                아직 배틀 전적이 없어요. 배틀에 참여하면 이번 시즌 전적·승률이 여기 쌓여요.
+              </p>
+            )}
           </motion.div>
 
           {/* 참여 이력 카드 (최근 30판) */}

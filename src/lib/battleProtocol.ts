@@ -43,8 +43,10 @@ export type ServerMsg =
   | { t: 'clear:reject'; spawnIndex: number } // 선착 패배 — 낙관적 클리어 롤백(경쟁형)
   | { t: 'opponent:typing'; userSeq: number; spawnIndex: number; len: number }
   | { t: 'opponent:state'; userSeq: number; score: number; combo: number; hp: number }
+  | { t: 'opponent:finished'; userSeq: number } // 상대가 먼저 끝남 → 내 게임도 즉시 종료
   | { t: 'item:used'; userSeq: number; effect: string; targetSeq: number }
   | { t: 'match:over'; matchId: string; results: MatchResult[]; isRanked: boolean }
+  | { t: 'match:cancelled'; matchId: string; reason: 'opponent_left' } // 카운트다운 중 상대 이탈 → 취소
   | { t: 'error'; code: string; message: string };
 
 export function needForMode(mode: Mode): number {

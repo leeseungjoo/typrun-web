@@ -12,7 +12,7 @@ import MeteorLayer, { type Meteor } from './MeteorLayer';
 
 const MATCH_DURATION_SEC = 120;
 const MAX_HP = 10;
-const WIN_THRESHOLD = 500; // 1등 점수가 이 미만이면 무효판(드로우) — ws managers.ts 와 동일
+const WIN_THRESHOLD = 200; // 1등 점수가 이 미만이면 무효판(드로우) — ws managers.ts 와 동일(수정요청4: 200)
 const OPP_TYPING_TTL_MS = 1500; // 상대 타이핑 표시 자동 만료
 const STATE_SYNC_MS = 600; // 내 점수/콤보/생명 미러 동기화 주기
 
@@ -58,9 +58,16 @@ export default function BattleGame({
   const [pool, setPool] = useState<Word[] | null>(null);
   const [meteors, setMeteors] = useState<Meteor[]>([]);
   const oppNickname = players.find((p) => p.userSeq !== you)?.nickname ?? '상대';
+  const myNickname = players.find((p) => p.userSeq === you)?.nickname ?? '나';
   const [opp, setOpp] = useState<OppState>({ nickname: oppNickname, score: 0, combo: 0, hp: INITIAL_HP, typingWord: null });
   const [result, setResult] = useState<Result | null>(null);
   const [awaiting, setAwaiting] = useState(false);
+  const [canExit, setCanExit] = useState(false); // 결과화면 진입 직후 1.5s 는 무심결 Enter 로 못 나가게(수정요청4)
+  // 내가 단어를 깬 자리의 인플레이스 점수 팝업(랭크화면처럼) + 입력칸 성공 이펙트
+  const [popups, setPopups] = useState<{ id: number; x: number; y: number; value: number; meaning?: string }[]>([]);
+  const [inputFxKey, setInputFxKey] = useState(0);
+  const popupIdRef = useRef(0);
+  const recordedRef = useRef(false); // 전적 영속 1회 보장
 
   const meteorIdRef = useRef(0);
   const poolRef = useRef<Word[] | null>(pool);
@@ -110,6 +117,13 @@ export default function BattleGame({
     onClear: (e) => {
       socket.send({ t: 'word:clear', matchId, spawnIndex: e.spawnIndex, typed: e.word, comboAfter: e.combo, elapsedMs: e.elapsedMs });
     },
+    onClearedFx: (x, y, gain, meaning) => {
+      // 깬 자리에서 그대로 터지는 +점수 팝업(랭크화면과 동일) + 입력칸 성공 이펙트.
+      const id = popupIdRef.current++;
+      setPopups((p) => [...p, { id, x, y, value: gain, meaning }]);
+      window.setTimeout(() => setPopups((p) => p.filter((q) => q.id !== id)), meaning ? 1500 : 1000);
+      setInputFxKey((k) => k + 1);
+    },
     onAttack: (effect) => {
       socket.send({ t: 'item:used', matchId, effect });
     },
@@ -130,7 +144,7 @@ export default function BattleGame({
     },
   });
 
-  const { applyIncomingEffect } = eng;
+  const { applyIncomingEffect, finishNow } = eng;
 
   // 내 점수/콤보/생명을 상대 미러로 주기 동기화.
   const engStateRef = useRef({ score: 0, combo: 0, hp: INITIAL_HP });
@@ -175,6 +189,9 @@ export default function BattleGame({
       } else if (msg.t === 'item:used') {
         // 상대가 나에게 발사한 공격형 아이템 → 내 필드에 적용.
         applyIncomingEffect(msg.effect as ItemEffect);
+      } else if (msg.t === 'opponent:finished') {
+        // 상대가 먼저 끝남 → 내 게임도 즉시 종료(바로 끝나게).
+        finishNow();
       } else if (msg.t === 'match:over') {
         if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
         const mine = msg.results.find((r) => r.userSeq === you);
@@ -183,11 +200,25 @@ export default function BattleGame({
         if (mine) {
           const voided = Math.max(mine.finalScore, top) < WIN_THRESHOLD;
           setResult({ mine: mine.finalScore, top, outcome: mine.result, official: true, voided });
+          // 전적 영속(자기 결과 자기보고, fire-and-forget). 서버 엔드포인트 배포 후 자동 활성화.
+          if (!recordedRef.current) {
+            recordedRef.current = true;
+            api
+              .recordBattle({
+                matchId,
+                matchSeed,
+                categorySeq,
+                result: mine.result,
+                finalScore: mine.finalScore,
+                rankInMatch: mine.rankInMatch,
+              })
+              .catch(() => {});
+          }
         }
       }
     });
     return off;
-  }, [socket, you, matchSeed, applyIncomingEffect, bumpOppTyping]);
+  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow]);
 
   // 게임 중 아무 키나 누르면 입력칸 포커스 유지.
   useEffect(() => {
@@ -202,9 +233,12 @@ export default function BattleGame({
     return () => window.removeEventListener('keydown', refocus);
   }, [running, eng.inputRef]);
 
-  const resultBtnRef = useRef<HTMLButtonElement>(null);
+  // 결과화면: 자동 포커스 제거 + 진입 직후 1.5s 는 나가기 버튼 비활성(무심결 Enter 로 결과 못 보고 넘어가는 것 방지).
   useEffect(() => {
-    if (result) resultBtnRef.current?.focus();
+    if (!result) return;
+    setCanExit(false);
+    const t = setTimeout(() => setCanExit(true), 1500);
+    return () => clearTimeout(t);
   }, [result]);
 
   if (!pool) {
@@ -247,11 +281,11 @@ export default function BattleGame({
           {result.official ? '공식 결과 · 전적 반영은 곧 추가됩니다(베타).' : '임시 결과(서버 응답 지연) · 전적 반영은 곧.'}
         </p>
         <button
-          ref={resultBtnRef}
-          className="btn-primary rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="btn-primary rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onExit}
+          disabled={!canExit}
         >
-          리그로 돌아가기
+          {canExit ? '리그로 돌아가기' : '결과 확인 중…'}
         </button>
       </div>
     );
@@ -341,6 +375,35 @@ export default function BattleGame({
           ))}
         </AnimatePresence>
 
+        {/* 내가 깬 자리에서 그대로 솟구치는 +점수 팝업(랭크화면과 동일) */}
+        {popups.map((p) => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, y: 0, scale: 0.6 }}
+            animate={{
+              opacity: [0, 1, 1, 0],
+              y: p.meaning ? [0, -14, -22, -40] : [0, -16, -36, -56],
+              scale: [0.6, 1.2, 1, 1],
+            }}
+            transition={{
+              duration: p.meaning ? 1.5 : 1,
+              times: p.meaning ? [0, 0.1, 0.78, 1] : [0, 0.15, 0.7, 1],
+              ease: 'easeOut',
+            }}
+            className="absolute -translate-x-1/2 pointer-events-none z-20 flex flex-col items-center"
+            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+          >
+            <span className="font-impact text-3xl text-yellow-300 drop-shadow-[0_0_8px_rgba(255,200,0,0.7)]">
+              +{p.value.toLocaleString()}
+            </span>
+            {p.meaning && (
+              <span className="mt-1 px-2 py-0.5 rounded-md bg-black/60 border border-white/15 text-white text-sm font-bold whitespace-nowrap">
+                {p.meaning}
+              </span>
+            )}
+          </motion.div>
+        ))}
+
         {/* 상대가 자기 필드 단어를 깰 때 화면을 가로지르는 별똥별(연출) */}
         <MeteorLayer meteors={meteors} />
       </div>
@@ -364,6 +427,23 @@ export default function BattleGame({
           </div>
         )}
 
+        {/* 아이템 가이드 — 슬롯/즉시 아이템 한 줄 안내(수정요청4) */}
+        <div className="px-3 pt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[10px] leading-none opacity-80 select-none pointer-events-none">
+          <span className="font-bold text-white/45">📦슬롯</span>
+          {ITEM_POOL.filter((i) => i.slot).map((i) => (
+            <span key={i.effect} className="inline-flex items-center gap-0.5 text-white/80">
+              <span>{i.icon}</span>{i.name}
+            </span>
+          ))}
+          <span className="text-white/25">|</span>
+          <span className="font-bold text-white/45">⚡즉시</span>
+          {ITEM_POOL.filter((i) => !i.slot).map((i) => (
+            <span key={i.effect} className={`inline-flex items-center gap-0.5 ${i.positive ? 'text-emerald-300/80' : 'text-red-300/80'}`}>
+              <span>{i.icon}</span>{i.name}
+            </span>
+          ))}
+        </div>
+
         {/* 아이템덱(인벤토리 슬롯, 1~5) */}
         <div className="px-3 py-1.5 flex items-center justify-center gap-1.5">
           {eng.inventory.map((item, i) => (
@@ -384,9 +464,34 @@ export default function BattleGame({
           ))}
         </div>
 
+        {/* 하트 + 유저명 — 입력창 바로 위(좌 나 / 우 상대), 수정요청4 */}
+        <div className="px-3 pt-1 flex items-stretch gap-2 text-xs">
+          <div className="w-1/2 flex items-center justify-center gap-2 min-w-0">
+            <Hearts hp={eng.hp} max={MAX_HP} label={`내 생명 ${eng.hp} / ${MAX_HP}`} small />
+            <span className="text-white/75 font-semibold truncate">{myNickname}</span>
+          </div>
+          <div className="w-1/2 flex items-center justify-center gap-2 min-w-0">
+            <Hearts hp={opp.hp} max={MAX_HP} label={`상대 생명 ${opp.hp} / ${MAX_HP}`} small />
+            <span className="text-white/55 truncate">{opp.nickname}</span>
+          </div>
+        </div>
+
         {/* 양분 입력: 좌 내 입력 / 우 상대 타이핑 */}
         <div className="relative px-3 pb-3 flex items-stretch gap-2">
           <div className="w-1/2 relative">
+            {/* 입력 성공 시 입력칸 둘레 짧은 링 펄스(수정요청4) */}
+            <AnimatePresence>
+              {inputFxKey > 0 && (
+                <motion.span
+                  key={inputFxKey}
+                  initial={{ opacity: 0.7, scale: 0.85 }}
+                  animate={{ opacity: 0, scale: 1.25 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="absolute inset-0 rounded-xl ring-2 ring-emerald-300/70 pointer-events-none"
+                  aria-hidden
+                />
+              )}
+            </AnimatePresence>
             <input
               ref={eng.inputRef}
               autoFocus

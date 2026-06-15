@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../api/client';
 import { BattleSocket, type SocketState } from '../lib/battleSocket';
 import { needForMode, type Mode, type PlayerInfo } from '../lib/battleProtocol';
 import BattleGame from '../components/battle/BattleGame';
@@ -34,6 +35,22 @@ export default function BattleLobbyPage() {
   const [err, setErr] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [countdownSec, setCountdownSec] = useState<number | null>(null);
+  const [catName, setCatName] = useState<string | null>(null);
+
+  // 대기 중 어느 리그인지 표시(수정요청4)
+  useEffect(() => {
+    if (!validParams) return;
+    let alive = true;
+    api
+      .categories()
+      .then((cats) => {
+        if (alive) setCatName(cats.find((c) => c.seq === categorySeq)?.name ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [categorySeq, validParams]);
 
   // 소켓 연결 + 큐 진입
   useEffect(() => {
@@ -81,6 +98,15 @@ export default function BattleLobbyPage() {
           break;
         case 'match:start':
           setStarted(true);
+          break;
+        case 'match:cancelled':
+          // 카운트다운 중 상대 이탈 → 매치 취소: 다시 매칭 큐로(혼자 시작 방지).
+          matchedRef.current = false;
+          setMatch(null);
+          setStarted(false);
+          setCountdownSec(null);
+          setNotice('상대가 나가 매칭이 취소됐어요. 다시 상대를 찾는 중…');
+          if (mode) sock.send({ t: 'queue:join', categorySeq, mode, nickname: myNickname });
           break;
         case 'error':
           if (matchedRef.current) break; // 게임 진입 후엔 로비 에러 배너로 오염시키지 않음.
@@ -180,6 +206,11 @@ export default function BattleLobbyPage() {
             베타
           </span>
         </h1>
+        {catName && (
+          <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-white/75 truncate max-w-[45%]">
+            <span aria-hidden>📂</span> {catName}
+          </span>
+        )}
       </div>
 
       {err && (

@@ -177,6 +177,18 @@ export interface DrawWinnersResponse {
   winners: DrawWinnerEmail[];
 }
 
+// 배틀 전적 집계 (프로필/배틀랭킹) — 이번 시즌 누적
+export interface BattleRecordStats {
+  season_seq: number;
+  matches: number;       // 총 전적(=플레이 수)
+  wins: number;
+  losses: number;
+  draws: number;
+  win_rate: number;      // 0~100 (%)
+  points: number;        // 승점(승3/무1)
+  rank_no: number | null;
+}
+
 // 배틀 리그별 접속자 카운터 (게임중/대기중) — typrun-ws read-through
 export interface BattleStatus {
   category_seq: number;

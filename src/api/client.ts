@@ -9,6 +9,7 @@ import type {
   DrawResponse,
   DrawWinnersResponse,
   ContactForm,
+  BattleRecordStats,
 } from './types';
 
 const BASE = import.meta.env.VITE_API_BASE_URL;
@@ -95,6 +96,28 @@ export const api = {
   drawWinners(token: string, seqs: number[]): Promise<DrawWinnersResponse> {
     const q = new URLSearchParams({ token, seqs: seqs.join(',') });
     return request<DrawWinnersResponse>(`/draw_winners?${q.toString()}`);
+  },
+
+  // 배틀 결과 자기보고(전적 영속) — 종료 공식결과 수신 시 1회. 멱등(서버에서 matchId+user 중복 무시).
+  recordBattle(form: {
+    matchId: string;
+    matchSeed: number;
+    categorySeq: number;
+    result: 'win' | 'loss' | 'draw';
+    finalScore: number;
+    rankInMatch: number;
+    maxCombo?: number;
+  }): Promise<{ recorded: boolean }> {
+    const body = new FormData();
+    Object.entries(form).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) body.append(k, String(v));
+    });
+    return request<{ recorded: boolean }>('/battle/record', { method: 'POST', body });
+  },
+
+  // 내 배틀 전적(이번 시즌 누적) — 프로필 노출용
+  myBattleStats(): Promise<BattleRecordStats> {
+    return request<BattleRecordStats>('/auth/my_battle_stats');
   },
 
   // 협업/콜라보 문의 접수 (백엔드가 메일 발송 + DB 적재)

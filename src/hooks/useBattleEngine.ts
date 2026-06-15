@@ -61,6 +61,7 @@ export interface UseBattleEngineOpts {
   durationSec: number;
   running: boolean; // 카운트다운 종료 후 true → 루프 시작
   onClear?: (e: ClearEvent) => void; // 공유 단어 클리어(상대 미러 갱신용 중계)
+  onClearedFx?: (x: number, y: number, gain: number, meaning?: string) => void; // 내가 깬 자리 인플레이스 점수 팝업용
   onAttack?: (effect: ItemEffect) => void; // negative 아이템 → 상대에게 발사
   onTyping?: (spawnIndex: number, len: number) => void; // 실시간 입력 진행(상대 표시용)
   onMiss?: (hp: number) => void;
@@ -69,8 +70,8 @@ export interface UseBattleEngineOpts {
 
 export const INITIAL_HP = 8; // 기획 2026-06-15: 기본 8
 export const MAX_HP = 10; // 힐로 최대 10
-const SPAWN_MS_START = 1000; // 단판(2000)의 2배 빈도
-const SPAWN_MS_MIN = 350; // 단판(700)의 2배 빈도
+const SPAWN_MS_START = 1430; // 단판(2000)의 약 1.4배 빈도(수정요청4: 2배→1.4배)
+const SPAWN_MS_MIN = 500; // 단판(700)의 약 1.4배 빈도
 const SPEED_START = 4.4;
 const SPEED_MAX = 10;
 const BOTTOM_Y = 105;
@@ -452,6 +453,7 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     setCorrect((c) => c + 1);
     setScore((s) => s + gain);
     lastHitAtRef.current = performance.now();
+    cbRef.current.onClearedFx?.(hit.x, hit.y, gain, hit.word.meaning?.trim() || undefined); // 깬 자리 인플레이스 팝업
     sound.play('hit');
     if (nextCombo === 5 || nextCombo === 10 || nextCombo === 20) sound.play('combo');
 
@@ -562,6 +564,13 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     },
   };
 
+  // 상대가 먼저 끝남 → 내 게임도 즉시 종료(루프 정지 + 통계 보고). over→onFinish 1회.
+  const finishNow = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    setOver(true);
+  }, []);
+
   const timeLeft = Math.max(0, Math.ceil(durationSec + bonusTime - elapsed));
 
   return {
@@ -588,5 +597,6 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
     bind,
     useItemAt,
     applyIncomingEffect,
+    finishNow,
   };
 }
