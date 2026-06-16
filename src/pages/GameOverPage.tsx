@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import BannerSlot from '../components/BannerSlot';
 import type { ScoreSaveResponse } from '../api/types';
 
 const PENDING_KEY = 'typrun_pending_result';
@@ -193,11 +194,6 @@ export default function GameOverPage() {
         <Stat label="최대 콤보" value={result.max_combo} />
         <Stat label="정답 / 놓침" value={`${result.correct_count} / ${result.miss_count}`} />
       </motion.div>
-
-      {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
-      <div className="w-full max-w-2xl mb-8 flex justify-center">
-        <BannerSlot slot="gameover" />
-      </div>
 
       {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
       <div className="w-full max-w-2xl mb-8 flex justify-center">

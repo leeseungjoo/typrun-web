@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Category } from '../api/types';
 import CoverFlow from '../components/league/CoverFlow';
+import BannerSlot from '../components/BannerSlot';
 
 type Tab = 'practice' | 'ranking';
 

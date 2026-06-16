@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isSyntheticEmail } from '../api/auth';
 import ContactModal from '../components/ContactModal';
 import Footer from '../components/Footer';
+import BannerSlot from '../components/BannerSlot';
 import logo from '../assets/backgrounds/logo.png';
 import type { Season } from '../api/types';
 
@@ -60,11 +61,6 @@ export default function MainPage() {
             <span className="text-white">이벤트 제휴 문의</span>
           </button>
         </motion.div>
-
-        {/* 메인 배너 (히어로 하단) */}
-        <div className="w-full max-w-[400px] mt-6">
-          <BannerSlot slot="main" isMember={!!user} />
-        </div>
 
         {/* 메인 배너 (히어로 하단) */}
         <div className="w-full max-w-[400px] mt-6">
