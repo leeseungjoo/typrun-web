@@ -30,7 +30,11 @@ export default function BannerSlot({ slot, isMember = false, className = '' }: P
   function onClick() {
     if (!banner) return;
     clickBanner(banner.seq).catch(() => {});
-    if (banner.linkUrl) window.open(banner.linkUrl, '_blank', 'noopener,noreferrer');
+    if (banner.linkUrl) {
+      // 프로토콜 누락(예: "kioskprogram.com") 시 https:// 자동 보정 → 상대경로 오인 방지
+      const url = /^https?:\/\//i.test(banner.linkUrl) ? banner.linkUrl : `https://${banner.linkUrl}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 
   return (
