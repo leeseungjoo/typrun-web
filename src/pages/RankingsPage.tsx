@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { pickProfileImage } from '../api/auth';
 import ContactModal from '../components/ContactModal';
-import type { Category, RankingEntry } from '../api/types';
+import type { Category, RankingEntry, BattleRankEntry } from '../api/types';
 
 function relativeTime(input: string): string {
   if (!input) return '';
@@ -205,7 +205,7 @@ export default function RankingsPage() {
           )}
         </>
       ) : (
-        <BattleRankingsBeta onLeague={() => nav('/league')} />
+        <BattleRankings onLeague={() => nav('/league')} reloadKey={reloadKey} />
       )}
 
       {/* 상세 모달 */}
@@ -237,33 +237,108 @@ function RankTab({ active, onClick, label }: { active: boolean; onClick: () => v
   );
 }
 
-/* ====================== 배틀 랭킹(베타 — 집계 준비중) ====================== */
+/* ====================== 배틀 랭킹(시즌 누적 — 전 리그 통합) ====================== */
 
-function BattleRankingsBeta({ onLeague }: { onLeague: () => void }) {
-  return (
-    <div className="card text-center py-12">
-      <div className="text-5xl mb-3" aria-hidden>⚔️</div>
-      <p className="text-lg font-bold mb-1">배틀 랭킹 준비 중</p>
-      <p className="text-sm text-white/55 leading-relaxed mb-6">
-        실시간 배틀은 베타예요. 전적·승률 집계가 곧 시작돼요.<br />
-        지금 배틀에 참여하면 집계 시작과 함께 순위에 반영돼요.
-      </p>
-      <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-6">
-        {[
-          { k: '플레이어', v: '–' },
-          { k: '오늘 매치', v: '–' },
-          { k: '집계 시작', v: '곧' },
-        ].map((s) => (
-          <div key={s.k} className="rounded-xl border border-white/10 bg-white/5 py-3">
-            <div className="font-impact text-2xl leading-none">{s.v}</div>
-            <div className="text-[11px] text-white/45 mt-1">{s.k}</div>
-          </div>
-        ))}
+function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadKey: number }) {
+  const [rows, setRows] = useState<BattleRankEntry[]>([]);
+  const [load, setLoad] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoad(true);
+    setErr(null);
+    api.battleRankings(50)
+      .then((d) => setRows(d.rankings))
+      .catch((e) => setErr(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoad(false));
+  }, [reloadKey]);
+
+  if (load) {
+    return <div className="min-h-[280px] flex items-center justify-center text-white/50">불러오는 중...</div>;
+  }
+  if (err) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-3">{err}</p>
       </div>
-      <button className="btn-primary" onClick={onLeague}>
-        ⚔️ 배틀하러 가기
-      </button>
-    </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <div className="card text-center py-12">
+        <div className="text-5xl mb-3" aria-hidden>⚔️</div>
+        <p className="text-lg font-bold mb-1">아직 배틀 기록이 없어요</p>
+        <p className="text-sm text-white/55 leading-relaxed mb-6">
+          실시간 배틀에 참여하면 이번 시즌 전적과 승점이<br />여기 순위로 쌓여요.
+        </p>
+        <button className="btn-primary" onClick={onLeague}>⚔️ 배틀하러 가기</button>
+      </div>
+    );
+  }
+
+  const top3 = rows.slice(0, 3);
+  const rest = rows.slice(3);
+  return (
+    <>
+      <p className="text-center text-xs text-white/40 mb-4">⚔️ 이번 시즌 배틀 랭킹 · 승점(승 3 · 무 1) 순</p>
+      {top3.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          {top3.map((r, i) => (
+            <BattlePodiumCard key={r.user_seq} entry={r} index={i} />
+          ))}
+        </div>
+      )}
+      {rest.length > 0 && (
+        <div className="card p-0 overflow-hidden">
+          <ul className="divide-y divide-white/10">
+            {rest.map((r) => (
+              <li key={r.user_seq} className="flex items-center px-4 py-3">
+                <span className="w-10 text-center text-white/60 tabular-nums">{r.rank}</span>
+                <Avatar entry={r} size={32} />
+                <span className="flex-1 font-semibold truncate ml-2">{r.nickname}</span>
+                <span className="text-right ml-2">
+                  <div className="font-bold tabular-nums">{r.points}점</div>
+                  <div className="text-[10px] text-white/40 tabular-nums">
+                    {r.wins}승 {r.losses}패 {r.draws}무 · {Math.round(r.win_rate)}%
+                  </div>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex justify-center mt-8">
+        <button className="btn-primary" onClick={onLeague}>⚔️ 배틀하러 가기</button>
+      </div>
+    </>
+  );
+}
+
+function BattlePodiumCard({ entry, index }: { entry: BattleRankEntry; index: number }) {
+  const s = PODIUM_STYLE[index] ?? PODIUM_STYLE[2];
+  const isFirst = index === 0;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`rounded-2xl border ${s.bg} ${s.border} backdrop-blur p-4 ${isFirst ? 'ring-2 ' + s.ring : ''}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-3xl">{s.medal}</span>
+        <span className={`text-xs tracking-wider font-bold ${s.text}`}>#{entry.rank}</span>
+      </div>
+      <div className="flex items-center gap-3 mb-2">
+        <Avatar entry={entry} size={48} />
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-bold truncate">{entry.nickname}</div>
+        </div>
+      </div>
+      <div className={`text-2xl font-extrabold tabular-nums ${s.text}`}>{entry.points}점</div>
+      <div className="text-[10px] text-white/40 mt-1 tabular-nums">
+        {entry.wins}승 {entry.losses}패 {entry.draws}무 · {Math.round(entry.win_rate)}%
+      </div>
+    </motion.div>
   );
 }
 

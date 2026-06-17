@@ -10,6 +10,7 @@ import type {
   DrawWinnersResponse,
   ContactForm,
   BattleRecordStats,
+  BattleRankingsResponse,
 } from './types';
 
 const BASE = import.meta.env.VITE_API_BASE_URL;
@@ -121,6 +122,11 @@ export const api = {
   // 내 배틀 전적(이번 시즌 누적) — 프로필 노출용
   myBattleStats(): Promise<BattleRecordStats> {
     return request<BattleRecordStats>('/auth/my_battle_stats');
+  },
+
+  // 배틀 시즌 랭킹 (전 리그 통합)
+  battleRankings(limit = 50): Promise<BattleRankingsResponse> {
+    return request<BattleRankingsResponse>(`/battle/rankings?limit=${limit}`);
   },
 
   // 협업/콜라보 문의 접수 (백엔드가 메일 발송 + DB 적재)

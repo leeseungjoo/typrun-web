@@ -189,6 +189,26 @@ export interface BattleRecordStats {
   rank_no: number | null;
 }
 
+// 배틀 시즌 랭킹 (전 리그 통합)
+export interface BattleRankEntry {
+  rank: number;
+  user_seq: number;
+  nickname: string;
+  profile_image?: string;
+  profile_image_data?: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  play_count: number;
+  win_rate: number;      // 0~100 (%)
+  points: number;        // 승점(승3/무1)
+}
+
+export interface BattleRankingsResponse {
+  season_seq: number;
+  rankings: BattleRankEntry[];
+}
+
 // 배틀 리그별 접속자 카운터 (게임중/대기중) — typrun-ws read-through
 export interface BattleStatus {
   category_seq: number;
