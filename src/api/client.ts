@@ -21,11 +21,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: 'include',
   });
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${path}`);
+    // 내부 경로/상태코드는 콘솔에만 — 사용자에게는 일반 메시지
+    console.error(`[API] ${res.status} ${path}`);
+    throw new Error('일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
   }
   const body: ApiResponse<T> = await res.json();
   if (body.resultCode !== '00') {
-    throw new Error(body.resultMessage || 'API error');
+    // resultMessage 는 서버가 내려주는 사용자용 메시지(한국어) — 그대로 노출
+    throw new Error(body.resultMessage || '요청을 처리하지 못했어요.');
   }
   return body.data;
 }

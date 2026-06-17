@@ -60,14 +60,18 @@ export default function RankingsPage() {
         const start = running.findIndex((c) => String(c.seq) === String(categorySeq));
         setIdx(start >= 0 ? start : 0);
       })
-      .catch((e) => setScoreErr(String(e)));
+      .catch((e) => setScoreErr(e instanceof Error ? e.message : String(e)));
     // categorySeq 는 최초 진입에만 사용 — 이후 페이징은 내부 idx 로 제어
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 2) 현재 리그 점수 랭킹 로드
   const loadScore = useCallback(() => {
-    if (!current) return;
+    if (!current) {
+      // 운영 중 랭킹 리그가 0개 — 로딩을 종료해 하단 버튼(리그선택/문의)이 정상 노출되게
+      setScoreLoad(false);
+      return;
+    }
     setScoreLoad(true);
     setScoreErr(null);
     api.rankings(current.seq, 50)
@@ -75,7 +79,7 @@ export default function RankingsPage() {
         setRows(d.rankings);
         setScoreMeta({ mode: d.mode, start: d.window_start, end: d.window_end });
       })
-      .catch((e) => setScoreErr(String(e)))
+      .catch((e) => setScoreErr(e instanceof Error ? e.message : String(e)))
       .finally(() => setScoreLoad(false));
   }, [current]);
 
@@ -105,26 +109,31 @@ export default function RankingsPage() {
 
   return (
     <div className="min-h-screen px-5 pt-16 pb-8 max-w-3xl mx-auto">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
-        <button className="text-white/60 hover:text-white" onClick={() => nav('/')} aria-label="홈으로">
-          ← 홈
+      {/* 헤더 — 홈은 공용 상단바(우상단)에 있으므로 제목만 */}
+      <h2 className="text-2xl font-bold tracking-tight text-center mb-4">🏆 랭킹</h2>
+
+      {/* 뷰 탭(점수/배틀) + 우측 홈·새로고침 */}
+      <div className="mb-5 flex items-center justify-center gap-2">
+        <div className="flex flex-1 max-w-xs rounded-full border border-white/15 bg-white/5 p-1">
+          <RankTab active={view === 'score'} onClick={() => setView('score')} label="🏅 점수" />
+          <RankTab active={view === 'battle'} onClick={() => setView('battle')} label="⚔️ 배틀" />
+        </div>
+        <button
+          onClick={() => nav('/')}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition"
+          title="홈"
+          aria-label="홈으로"
+        >
+          🏠
         </button>
-        <h2 className="text-2xl font-bold tracking-tight">🏆 랭킹</h2>
         <button
           onClick={() => setReloadKey((k) => k + 1)}
-          className="text-white/60 hover:text-white text-lg"
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition text-lg"
           title="새로고침"
           aria-label="새로고침"
         >
           ↻
         </button>
-      </div>
-
-      {/* 뷰 탭 — 점수 / 배틀 */}
-      <div className="mx-auto mb-5 flex w-full max-w-xs rounded-full border border-white/15 bg-white/5 p-1">
-        <RankTab active={view === 'score'} onClick={() => setView('score')} label="🏅 점수" />
-        <RankTab active={view === 'battle'} onClick={() => setView('battle')} label="⚔️ 배틀" />
       </div>
 
       {view === 'score' ? (
@@ -182,16 +191,18 @@ export default function RankingsPage() {
             />
           )}
 
-          {/* 하단 액션 */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-            {current && (
-              <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
-                🎮 도전하기
-              </button>
-            )}
-            <button className="btn-ghost" onClick={() => nav('/league')}>리그 선택</button>
-            <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 문의</button>
-          </div>
+          {/* 하단 액션 — 랭킹 로드 완료 후 노출(로딩 중 버튼이 먼저 떴다 밀리는 튐 방지) */}
+          {!scoreLoad && (
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+              {current && (
+                <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
+                  🎮 도전하기
+                </button>
+              )}
+              <button className="btn-ghost" onClick={() => nav('/league')}>리그 선택</button>
+              <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 문의</button>
+            </div>
+          )}
         </>
       ) : (
         <BattleRankingsBeta onLeague={() => nav('/league')} />
@@ -276,7 +287,14 @@ function ScoreRankings({
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3);
 
-  if (load) return <p className="text-center text-white/50 py-12">불러오는 중...</p>;
+  // 로딩 영역에 카드 높이만큼 공간을 확보해 로드 완료 시 콘텐츠 점프(튐) 최소화
+  if (load) {
+    return (
+      <div className="min-h-[280px] flex items-center justify-center text-white/50">
+        불러오는 중...
+      </div>
+    );
+  }
   if (err) {
     return (
       <div className="text-center py-12">

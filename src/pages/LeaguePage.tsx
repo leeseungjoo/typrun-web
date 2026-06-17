@@ -13,14 +13,17 @@ export default function LeaguePage() {
   const [err, setErr] = useState<string | null>(null);
   const [load, setLoad] = useState(true);
   const [tab, setTab] = useState<Tab>('ranking'); // 디폴트: 랭킹 리그(수정요청3)
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoad(true);
+    setErr(null);
     api
       .categories()
       .then(setCats)
-      .catch((e) => setErr(String(e)))
+      .catch((e) => setErr(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoad(false));
-  }, []);
+  }, [reloadKey]);
 
   // 활성화(플레이 가능) → 종료 → 오픈예정 순으로 정렬
   const statusOrder = (c: Category) => (c.status === 'coming_soon' ? 2 : c.status === 'ended' ? 1 : 0);
@@ -44,10 +47,28 @@ export default function LeaguePage() {
         {tab === 'practice' ? '천천히 연습하고 실력을 키워요' : '매월 1일 초기화 · 전국 랭킹에 도전'}
       </p>
 
-      {/* 카테고리 탭 — 랭킹(기본) / 연습 */}
-      <div className="mx-auto mb-8 inline-flex rounded-full border border-white/15 bg-white/5 p-1">
-        <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label="🏅 랭킹 리그" count={ranking.length} />
-        <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label="🌱 연습 리그" count={practice.length} />
+      {/* 카테고리 탭(랭킹/연습) + 홈·새로고침 */}
+      <div className="mb-8 flex items-center justify-center gap-2 flex-wrap">
+        <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
+          <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label="🏅 랭킹 리그" count={ranking.length} />
+          <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label="🌱 연습 리그" count={practice.length} />
+        </div>
+        <button
+          onClick={() => nav('/')}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition"
+          title="홈"
+          aria-label="홈으로"
+        >
+          🏠
+        </button>
+        <button
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition text-lg"
+          title="새로고침"
+          aria-label="새로고침"
+        >
+          ↻
+        </button>
       </div>
 
       {load && <p className="text-center text-white/50">불러오는 중...</p>}

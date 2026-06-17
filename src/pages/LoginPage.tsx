@@ -211,7 +211,7 @@ export default function LoginPage() {
             [
               { id: 'google' as Provider, name: 'Google', icon: 'G', cls: 'bg-white text-zinc-900 hover:bg-white/90' },
               { id: 'kakao'  as Provider, name: 'Kakao',  icon: '💬', cls: 'bg-yellow-400 text-zinc-900 hover:bg-yellow-300' },
-              { id: 'naver'  as Provider, name: 'Naver',  icon: 'N',  cls: 'bg-green-500 text-white hover:bg-green-400' },
+              { id: 'naver'  as Provider, name: 'Naver',  icon: 'N',  cls: 'bg-[#03C75A] text-white hover:bg-[#02b350]' },
             ]
           ).map((p) => (
             <button
@@ -354,6 +354,13 @@ export default function LoginPage() {
         <p className="text-center text-xs text-white/40 mt-8 leading-relaxed">
           소셜 로그인은 처음 사용 시 자동 가입됩니다 <br />
           이메일 가입은 인증 메일의 링크를 눌러야 완료됩니다
+        </p>
+        <p className="text-center text-[11px] text-white/35 mt-3 leading-relaxed">
+          가입 시{' '}
+          <button type="button" onClick={() => nav('/terms')} className="underline hover:text-white/70">이용약관</button>
+          {' '}및{' '}
+          <button type="button" onClick={() => nav('/privacy')} className="underline hover:text-white/70">개인정보처리방침</button>
+          에 동의하게 됩니다
         </p>
         </>
         )}

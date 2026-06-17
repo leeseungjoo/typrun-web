@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
 import MainPage from './pages/MainPage';
@@ -65,6 +65,8 @@ export default function App() {
         <Route path="/draw/:token" element={<DrawPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        {/* 알 수 없는 경로 → 홈으로 (빈 화면 방지) */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </AuthProvider>
     </MotionConfig>

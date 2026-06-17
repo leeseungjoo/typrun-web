@@ -60,22 +60,32 @@ async function postForm<T>(path: string, form: object): Promise<T> {
     body,
     credentials: 'include',
   });
+  if (!res.ok) {
+    // 비-JSON(HTML 에러 등) 응답에서 SyntaxError 대신 일반 메시지
+    console.error(`[Auth] ${res.status} ${path}`);
+    throw new Error('일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+  }
   const json: ApiResponse<T> = await res.json();
   if (json.resultCode !== '00') {
-    throw new Error(json.resultMessage || 'Auth error');
+    throw new Error(json.resultMessage || '요청을 처리하지 못했어요.');
   }
   return json.data;
 }
 
 async function getJson<T>(path: string): Promise<T | null> {
   const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
+  if (!res.ok) {
+    // 비-JSON(HTML 에러 등) 응답에서 SyntaxError 대신 일반 메시지
+    console.error(`[Auth] ${res.status} ${path}`);
+    throw new Error('일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+  }
   const json: ApiResponse<T> = await res.json();
   if (json.resultCode === '40') {
     // 비로그인 — null 반환 (에러 아님)
     return null;
   }
   if (json.resultCode !== '00') {
-    throw new Error(json.resultMessage || 'Auth error');
+    throw new Error(json.resultMessage || '요청을 처리하지 못했어요.');
   }
   return json.data;
 }
