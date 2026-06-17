@@ -1041,10 +1041,23 @@ export default function GamePage() {
             }
 
             sawTrustedKeyRef.current = false;
-            // 생초보: 단어에 띄어쓰기가 없으므로 스페이스도 제출(넘김)로 처리
-            if (isSuperBeginner && /\s/.test(v)) {
-              onSubmitInput(v);
-              return;
+            // 스페이스를 엔터처럼 제출로 취급. 단 공백 포함 단어(영화 제목·명언 등) 보호:
+            // - 생초보(공백 없는 단어 전제): 스페이스 무조건 제출(넘김)
+            // - 그 외: trim 값이 활성 단어와 정확히 매칭될 때만 제출, 아니면 공백 유지(공백 단어 입력 중)
+            if (/\s/.test(v)) {
+              if (isSuperBeginner) {
+                onSubmitInput(v);
+                return;
+              }
+              const t = v.trim().toLowerCase();
+              // 같은 접두로 시작하는 공백 단어(예: "영화 제목")가 활성 중이면 제출 보류 → 그 단어 완성 가능
+              const exact = !!t && activeRef.current.some((a) => a.word.word.toLowerCase() === t);
+              const prefixOfSpaceWord = !!t && activeRef.current.some((a) => a.word.word.toLowerCase().startsWith(`${t} `));
+              if (exact && !prefixOfSpaceWord) {
+                onSubmitInput(v);
+                return;
+              }
+              // 매칭 실패(또는 공백 단어 접두) → 공백 유지하고 계속 입력
             }
             setInput(v);
           }}

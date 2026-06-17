@@ -14,7 +14,6 @@ import {
   BOOSTER_MULTIPLIER,
   SLOW_FACTOR,
   SPEEDUP_FACTOR,
-  BOMB_SCORE_PER_WORD,
   BOMB_MAX,
   TIME_EXTEND_SEC,
   SNIPE_BONUS,
@@ -209,8 +208,19 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
           const ids = pick.map((a) => a.id);
           const idSet = new Set(ids);
           setActive((prev) => prev.filter((a) => !idSet.has(a.id)));
-          setScore((s) => s + pick.length * BOMB_SCORE_PER_WORD);
-          setCorrect((c) => c + pick.length);
+          // 콤보 적용(수정요청2): 터뜨린 개수만큼 콤보 누적 + 콤보 배율 반영 점수를 터트린 사람에게.
+          // 단 부스터(x10) 곱연산은 제외 — 폭탄 한 방 점수 폭증(밸런스/WIN_THRESHOLD 무력화) 방지.
+          let c = comboRef.current;
+          let gain = 0;
+          for (const a of pick) {
+            c += 1;
+            gain += clearScore(a.word.word.length, c, 1);
+          }
+          setCombo(c);
+          setMaxCombo((m) => Math.max(m, c));
+          lastHitAtRef.current = performance.now();
+          setScore((s) => s + gain);
+          setCorrect((cc) => cc + pick.length);
           sound.play('combo');
           sound.play('hit');
           if (!fromRemote) cbRef.current.onMutate?.('bomb', { ids });
@@ -584,6 +594,18 @@ export function useBattleEngine(opts: UseBattleEngineOpts) {
         return;
       }
       sawTrustedKeyRef.current = false;
+      // 스페이스도 엔터처럼 제출로 취급 — 공백 포함 단어 보호 위해 trim 매칭될 때만 제출
+      if (/\s/.test(v)) {
+        const t = v.trim().toLowerCase();
+        // 같은 접두로 시작하는 공백 단어가 활성 중이면 제출 보류 → 그 단어 완성 가능
+        const exact = !!t && activeRef.current.some((a) => a.word.word.toLowerCase() === t);
+        const prefixOfSpaceWord = !!t && activeRef.current.some((a) => a.word.word.toLowerCase().startsWith(`${t} `));
+        if (exact && !prefixOfSpaceWord) {
+          submit(v);
+          return;
+        }
+        // 매칭 실패(또는 공백 단어 접두) → 공백 유지하고 계속 입력
+      }
       setInput(v);
       reportTyping(v);
     },
