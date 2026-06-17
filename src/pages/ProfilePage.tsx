@@ -184,15 +184,9 @@ export default function ProfilePage() {
   const pwMismatch = newPwConfirm.length > 0 && newPw !== newPwConfirm;
 
   return (
-    <div className="min-h-screen px-6 py-10 max-w-5xl mx-auto">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-8">
-        <button className="text-white/60 hover:text-white" onClick={() => nav('/')}>
-          ← 홈
-        </button>
-        <h2 className="text-2xl font-bold">내 정보</h2>
-        <div className="w-12" />
-      </div>
+    <div className="min-h-screen px-6 pt-16 pb-10 max-w-5xl mx-auto">
+      {/* 헤더 — 홈은 공용 상단바(우상단)에 있으므로 제목만 (중복·겹침 방지) */}
+      <h2 className="text-2xl font-bold text-center mb-8">내 정보</h2>
 
       <div className="grid md:grid-cols-2 gap-6 items-start">
         {/* ===== 왼쪽 컬럼 ===== */}
