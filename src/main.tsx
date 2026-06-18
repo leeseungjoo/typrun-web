@@ -2,7 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
+import { detectLocale, initI18n } from './i18n';
 import './index.css';
+
+// 해시에서 locale 추론 → i18n 초기화 + HashRouter basename(#/en/...) 결정
+const { locale, basename } = detectLocale();
+initI18n(locale);
 
 // 초대링크 ?ref=<N> 진입 시 localStorage 에 보관 → 가입 시점에 사용
 // HashRouter 라 URL 형태: ?ref=42 (pathname 쿼리) 또는 #/?ref=42 (hash 쿼리)
@@ -22,7 +27,7 @@ try {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HashRouter>
+    <HashRouter basename={basename}>
       <App />
     </HashRouter>
   </React.StrictMode>

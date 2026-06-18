@@ -48,6 +48,29 @@ body {
   .tw-star { animation: none; opacity: 0.4; transform: none; top: var(--tw-rest, 30%); }
 }
 
+/* 타자 테스트 본문 — 나눔고딕(한글/영문 공용) */
+.tt-text {
+  font-family: 'Nanum Gothic', 'Pretendard', system-ui, sans-serif;
+}
+
+/* 타자 테스트 캐럿 — 현재 입력 위치 깜빡임 */
+.tt-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  margin: 0 -1px;
+  background: #FFB84C;
+  border-radius: 1px;
+  animation: tt-blink 1s steps(1) infinite;
+}
+@keyframes tt-blink {
+  50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tt-caret { animation: none; }
+}
+
 /* 공용 글로벌 컴포넌트 스타일 — 버튼/카드/인풋 (Figma 디자인 기준) */
 .btn-primary {
   @apply px-6 py-3 rounded-xl bg-primary text-white font-semibold transition hover:brightness-110 active:scale-95;

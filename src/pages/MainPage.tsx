@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +13,7 @@ import type { Season } from '../api/types';
 
 export default function MainPage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const [season, setSeason] = useState<Season | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const { user, loading } = useAuth();
@@ -39,7 +41,7 @@ export default function MainPage() {
         {/* 시즌 */}
         {season && (
           <p className="text-base md:text-xl text-white mt-3 mb-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
-            {season.year}년 {season.month}월 시즌 진행중 · ~{season.end_date}
+            {t('main.season', { year: season.year, month: season.month, end: season.end_date })}
           </p>
         )}
 
@@ -48,17 +50,20 @@ export default function MainPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="w-full max-w-[400px] flex flex-col gap-3"
+          className="w-full max-w-[400px] flex flex-col gap-3 mt-6 md:mt-8"
         >
+          <button
+            className="w-full py-4 rounded-[10px] bg-accent text-black font-extrabold text-xl text-center transition shadow-[0_4px_10px_rgba(0,0,0,0.4)] hover:brightness-105 active:scale-[0.98]"
+            onClick={() => nav('/test')}
+          >
+            {t('main.typingTest')}{' '}
+            <span className="text-black/55 text-sm font-bold align-middle">{t('main.speedTest')}</span>
+          </button>
           <button className="cta-btn" onClick={() => nav('/league')}>
-            게임 시작하기
+            {t('main.startGame')}
           </button>
           <button className="line-btn py-4 text-lg" onClick={() => nav('/rankings')}>
-            랭킹 보기
-          </button>
-          <button className="line-btn py-3.5 text-base" onClick={() => setContactOpen(true)}>
-            <span className="text-white/70">아이디어 / </span>
-            <span className="text-white">이벤트 제휴 문의</span>
+            {t('main.ranking')}
           </button>
         </motion.div>
 
@@ -70,11 +75,11 @@ export default function MainPage() {
         {/* 비로그인 안내 */}
         {!user && !loading && (
           <p className="text-sm text-white/90 mt-5 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
-            🏆 랭킹에 점수 저장하려면{' '}
+            {t('main.loginPromptPre')}
             <button className="underline hover:text-white font-semibold" onClick={() => nav('/login')}>
-              로그인
-            </button>{' '}
-            하세요
+              {t('main.loginPromptLink')}
+            </button>
+            {t('main.loginPromptPost')}
           </p>
         )}
 
@@ -87,16 +92,16 @@ export default function MainPage() {
             onClick={() => nav('/profile')}
             className="mt-6 px-4 py-3 rounded-xl bg-yellow-400/15 border border-yellow-400/40 text-yellow-100 text-xs leading-relaxed max-w-sm cursor-pointer hover:bg-yellow-400/20 backdrop-blur-sm"
           >
-            ⚠️ 상품 수령용 이메일이 등록되지 않았어요<br />
+            {t('main.emailWarnTitle')}<br />
             <span className="text-yellow-100/70 text-[10px]">
-              랭킹 상위 입상 시 연락받으려면 클릭해서 이메일 등록
+              {t('main.emailWarnSub')}
             </span>
           </motion.div>
         )}
       </div>
 
-      {/* 하단 푸터 — 개인정보처리방침 / 이용약관 */}
-      <Footer />
+      {/* 하단 푸터 — 개인정보처리방침 / 이용약관 / 운영사 / 제휴문의 */}
+      <Footer onContact={() => setContactOpen(true)} />
 
       {/* 문의 모달 */}
       <AnimatePresence>

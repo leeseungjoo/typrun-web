@@ -8,6 +8,9 @@ import LeagueDetailPage from './pages/LeagueDetailPage';
 import BattleLobbyPage from './pages/BattleLobbyPage';
 import GamePage from './pages/GamePage';
 import GameOverPage from './pages/GameOverPage';
+import TypingTestPage from './pages/TypingTestPage';
+import TypingStatsPage from './pages/TypingStatsPage';
+import TypingLeaderboardPage from './pages/TypingLeaderboardPage';
 import RankingsPage from './pages/RankingsPage';
 import ReferralRankPage from './pages/ReferralRankPage';
 import LoginPage from './pages/LoginPage';
@@ -50,6 +53,9 @@ export default function App() {
       <TopBar />
       <Routes>
         <Route path="/" element={<MainPage />} />
+        <Route path="/test" element={<TypingTestPage />} />
+        <Route path="/test/stats" element={<TypingStatsPage />} />
+        <Route path="/test/leaderboard" element={<TypingLeaderboardPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
