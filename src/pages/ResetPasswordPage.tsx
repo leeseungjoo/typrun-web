@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '../api/auth';
 
 export default function ResetPasswordPage() {
   const nav = useNavigate();
   const [params] = useSearchParams();
+  const { t } = useTranslation();
   const token = params.get('token') ?? '';
 
   const [password, setPassword] = useState('');
@@ -17,11 +19,11 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setErr(null);
     if (password.length < 6) {
-      setErr('비밀번호는 6자 이상이어야 해요');
+      setErr(t('auth.passwordTooShort'));
       return;
     }
     if (password !== passwordConfirm) {
-      setErr('비밀번호가 일치하지 않아요');
+      setErr(t('auth.passwordMismatch'));
       return;
     }
     setBusy(true);
@@ -38,9 +40,9 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
-        <p className="text-red-400">유효하지 않은 접근이에요 (토큰 없음)</p>
+        <p className="text-red-400">{t('auth.invalidAccessNoToken')}</p>
         <button className="btn-ghost" onClick={() => nav('/forgot-password')}>
-          비밀번호 재설정 다시 요청
+          {t('auth.requestResetAgain')}
         </button>
       </div>
     );
@@ -59,11 +61,11 @@ export default function ResetPasswordPage() {
         <h1 className="text-3xl font-black tracking-tight text-center mb-1">
           Typ<span className="text-primary">Run</span>
         </h1>
-        <p className="text-center text-white/40 text-sm mb-8">새 비밀번호 설정</p>
+        <p className="text-center text-white/40 text-sm mb-8">{t('auth.newPasswordTitle')}</p>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <label className="block">
-            <span className="text-xs text-white/50 tracking-wider">새 비밀번호</span>
+            <span className="text-xs text-white/50 tracking-wider">{t('auth.newPassword')}</span>
             <input
               type="password"
               autoComplete="new-password"
@@ -72,12 +74,12 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full mt-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
-              placeholder="6자 이상"
+              placeholder={t('auth.passwordPlaceholder')}
             />
           </label>
 
           <label className="block">
-            <span className="text-xs text-white/50 tracking-wider">비밀번호 확인</span>
+            <span className="text-xs text-white/50 tracking-wider">{t('auth.passwordConfirm')}</span>
             <input
               type="password"
               autoComplete="new-password"
@@ -88,20 +90,20 @@ export default function ResetPasswordPage() {
               className={`w-full mt-1 px-4 py-2.5 rounded-xl bg-white/10 border outline-none focus:border-white/50 ${
                 mismatch ? 'border-red-400/60' : 'border-white/20'
               }`}
-              placeholder="비밀번호 재입력"
+              placeholder={t('auth.passwordRetypePlaceholder')}
             />
             {mismatch && (
-              <span className="text-[11px] text-red-400 mt-1 block">비밀번호가 일치하지 않아요</span>
+              <span className="text-[11px] text-red-400 mt-1 block">{t('auth.passwordMismatch')}</span>
             )}
           </label>
 
           {err && <p className="text-sm text-red-400 text-center">{err}</p>}
 
           <button type="submit" disabled={busy} className="btn-primary mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
-            {busy ? '변경 중...' : '비밀번호 변경'}
+            {busy ? t('auth.changing') : t('auth.changePassword')}
           </button>
           <button type="button" className="text-xs text-white/40 hover:text-white/70 mt-1" onClick={() => nav('/login')}>
-            ← 로그인으로
+            {t('auth.backToLogin')}
           </button>
         </form>
       </motion.div>

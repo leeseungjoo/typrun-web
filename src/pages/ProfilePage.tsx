@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { isSyntheticEmail, containsProfanity, pickProfileImage, authApi } from '../api/auth';
@@ -12,6 +13,7 @@ const BIO_MAX = 200;
 
 export default function ProfilePage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const { user, loading, updateProfile, logout } = useAuth();
 
   const [nickname, setNickname] = useState('');
@@ -88,7 +90,7 @@ export default function ProfilePage() {
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/50">
-        로딩 중...
+        {t('profile.loading')}
       </div>
     );
   }
@@ -116,19 +118,19 @@ export default function ProfilePage() {
     setOk(null);
 
     if (nicknameInvalid) {
-      setErr('닉네임은 2~20자여야 해요');
+      setErr(t('profile.errNicknameLength'));
       return;
     }
     if (nicknameBad) {
-      setErr('닉네임에 부적절한 단어가 있어요');
+      setErr(t('profile.errNicknameProfanity'));
       return;
     }
     if (bioOver) {
-      setErr(`자기소개는 ${BIO_MAX}자 이내로 작성해주세요`);
+      setErr(t('profile.errBioLength', { n: BIO_MAX }));
       return;
     }
     if (bioBad) {
-      setErr('자기소개에 부적절한 단어가 있어요');
+      setErr(t('profile.errBioProfanity'));
       return;
     }
 
@@ -140,14 +142,14 @@ export default function ProfilePage() {
     if (imageData !== null) payload.profile_image_data = imageData; // 빈 문자열 = 삭제
 
     if (Object.keys(payload).length === 0) {
-      setErr('변경된 내용이 없어요');
+      setErr(t('profile.errNoChanges'));
       return;
     }
 
     setBusy(true);
     try {
       await updateProfile(payload);
-      setOk('프로필이 저장되었습니다');
+      setOk(t('profile.savedSuccess'));
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : String(e2));
     } finally {
@@ -160,17 +162,17 @@ export default function ProfilePage() {
     setPwErr(null);
     setPwOk(null);
     if (newPw.length < 6) {
-      setPwErr('새 비밀번호는 6자 이상이어야 해요');
+      setPwErr(t('profile.errNewPwLength'));
       return;
     }
     if (newPw !== newPwConfirm) {
-      setPwErr('새 비밀번호가 일치하지 않아요');
+      setPwErr(t('profile.errNewPwMismatch'));
       return;
     }
     setPwBusy(true);
     try {
       await authApi.changePassword(curPw, newPw);
-      setPwOk('비밀번호가 변경되었습니다');
+      setPwOk(t('profile.pwChangedSuccess'));
       setCurPw('');
       setNewPw('');
       setNewPwConfirm('');
@@ -186,7 +188,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen px-6 pt-16 pb-10 max-w-5xl mx-auto">
       {/* 헤더 — 홈은 공용 상단바(우상단)에 있으므로 제목만 (중복·겹침 방지) */}
-      <h2 className="text-2xl font-bold text-center mb-8">내 정보</h2>
+      <h2 className="text-2xl font-bold text-center mb-8">{t('profile.title')}</h2>
 
       <div className="grid md:grid-cols-2 gap-6 items-start">
         {/* ===== 왼쪽 컬럼 ===== */}
@@ -206,10 +208,10 @@ export default function ProfilePage() {
               onClick={() => fileInputRef.current?.click()}
               disabled={imgBusy}
               className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 hover:border-white/50 transition relative bg-white/5"
-              title="이미지 변경"
+              title={t('profile.changeImage')}
             >
               {displayImage ? (
-                <img src={displayImage} alt="프로필" className="w-full h-full object-cover" />
+                <img src={displayImage} alt={t('profile.profileImageAlt')} className="w-full h-full object-cover" />
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center text-2xl text-white/30">
                   👤
@@ -217,7 +219,7 @@ export default function ProfilePage() {
               )}
               {imgBusy && (
                 <span className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs">
-                  처리중...
+                  {t('profile.processing')}
                 </span>
               )}
             </button>
@@ -226,7 +228,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={onRemoveImage}
                 className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow hover:bg-red-400"
-                title="제거"
+                title={t('profile.remove')}
               >
                 ✕
               </button>
@@ -247,14 +249,14 @@ export default function ProfilePage() {
             </div>
             <div className="text-xl font-bold truncate">{user.nickname}</div>
             <div className="text-[10px] text-white/40 mt-1">
-              아바타 클릭해서 이미지 변경 (300x300 이하 권장)
+              {t('profile.avatarHint')}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/10">
-          <Stat label="최고 점수" value={(user.best_score ?? 0).toLocaleString()} />
-          <Stat label="총 플레이" value={`${user.total_play_count ?? 0}판`} />
+          <Stat label={t('profile.bestScore')} value={(user.best_score ?? 0).toLocaleString()} />
+          <Stat label={t('profile.totalPlays')} value={t('profile.playCount', { n: user.total_play_count ?? 0 })} />
         </div>
       </motion.div>
 
@@ -271,9 +273,9 @@ export default function ProfilePage() {
       {/* 합성 이메일 경고 */}
       {synthetic && (
         <div className="mb-4 px-4 py-3 rounded-xl bg-yellow-400/15 border border-yellow-400/40 text-yellow-100 text-sm leading-relaxed">
-          ⚠️ 카카오에서 이메일을 받아오지 못해 임시 이메일로 가입됐어요.<br />
+          {t('profile.syntheticEmailWarning')}<br />
           <span className="text-yellow-100/80">
-            랭킹 상품 수령을 위해 진짜 이메일을 등록해주세요.
+            {t('profile.syntheticEmailHint')}
           </span>
         </div>
       )}
@@ -289,7 +291,7 @@ export default function ProfilePage() {
         {/* 닉네임 */}
         <label className="block">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50 tracking-wider">닉네임</span>
+            <span className="text-xs text-white/50 tracking-wider">{t('profile.nickname')}</span>
             <span className="text-[10px] text-white/40">{nicknameTrim.length}/20</span>
           </div>
           <input
@@ -299,21 +301,21 @@ export default function ProfilePage() {
             maxLength={20}
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="2~20자"
+            placeholder={t('profile.nicknamePlaceholder')}
             className={`w-full mt-1 px-4 py-2.5 rounded-xl bg-white/10 border outline-none focus:border-white/50 ${
               nicknameBad ? 'border-red-400/60' : 'border-white/20'
             }`}
           />
           {nicknameBad && (
             <span className="text-[11px] text-red-400 mt-1 block">
-              부적절한 단어가 포함되어 있어요
+              {t('profile.profanityIncluded')}
             </span>
           )}
         </label>
 
         {/* 이메일 */}
         <label className="block">
-          <span className="text-xs text-white/50 tracking-wider">이메일</span>
+          <span className="text-xs text-white/50 tracking-wider">{t('profile.email')}</span>
           <input
             type="email"
             required
@@ -323,14 +325,14 @@ export default function ProfilePage() {
             className="w-full mt-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
           />
           {!synthetic && (
-            <span className="text-[10px] text-white/40 mt-1 block">현재: {user.email}</span>
+            <span className="text-[10px] text-white/40 mt-1 block">{t('profile.currentEmail', { email: user.email })}</span>
           )}
         </label>
 
         {/* 자기소개 */}
         <label className="block">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50 tracking-wider">자기소개</span>
+            <span className="text-xs text-white/50 tracking-wider">{t('profile.bio')}</span>
             <span className={`text-[10px] tabular-nums ${bioOver ? 'text-red-400' : 'text-white/40'}`}>
               {bioTrim.length}/{BIO_MAX}
             </span>
@@ -339,14 +341,14 @@ export default function ProfilePage() {
             rows={3}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="짧게 본인을 소개해주세요 (선택)"
+            placeholder={t('profile.bioPlaceholder')}
             className={`w-full mt-1 px-4 py-2.5 rounded-xl bg-white/10 border outline-none focus:border-white/50 resize-none ${
               bioBad || bioOver ? 'border-red-400/60' : 'border-white/20'
             }`}
           />
           {bioBad && (
             <span className="text-[11px] text-red-400 mt-1 block">
-              부적절한 단어가 포함되어 있어요
+              {t('profile.profanityIncluded')}
             </span>
           )}
         </label>
@@ -359,7 +361,7 @@ export default function ProfilePage() {
           disabled={busy || nicknameBad || bioBad || bioOver}
           className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {busy ? '저장 중...' : '저장'}
+          {busy ? t('profile.saving') : t('profile.save')}
         </button>
       </motion.form>
 
@@ -369,7 +371,7 @@ export default function ProfilePage() {
           className="text-xs text-white/40 hover:text-red-400"
           onClick={() => logout()}
         >
-          로그아웃
+          {t('profile.logout')}
         </button>
       </div>
 
@@ -385,26 +387,26 @@ export default function ProfilePage() {
             className="card"
           >
             <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-white/40 tracking-wider">⚔️ 배틀 전적</div>
+              <div className="text-xs text-white/40 tracking-wider">⚔️ {t('profile.battleRecord')}</div>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
-                {battleStats && battleStats.matches > 0 ? '이번 시즌' : '베타'}
+                {battleStats && battleStats.matches > 0 ? t('profile.thisSeason') : t('profile.beta')}
               </span>
             </div>
             <div className="grid grid-cols-4 gap-2 text-center">
-              <BattleStat label="전적" value={battleStats?.matches ?? 0} />
-              <BattleStat label="승" value={battleStats?.wins ?? 0} valueCls="text-emerald-300" />
-              <BattleStat label="패" value={battleStats?.losses ?? 0} valueCls="text-red-300" />
-              <BattleStat label="무" value={battleStats?.draws ?? 0} />
+              <BattleStat label={t('profile.matches')} value={battleStats?.matches ?? 0} />
+              <BattleStat label={t('profile.wins')} value={battleStats?.wins ?? 0} valueCls="text-emerald-300" />
+              <BattleStat label={t('profile.losses')} value={battleStats?.losses ?? 0} valueCls="text-red-300" />
+              <BattleStat label={t('profile.draws')} value={battleStats?.draws ?? 0} />
             </div>
             <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-white/45">승률</span>
+              <span className="text-xs text-white/45">{t('profile.winRate')}</span>
               <span className="font-bold tabular-nums text-white/70">
                 {battleStats && battleStats.matches > 0 ? `${Math.round(battleStats.win_rate)}%` : '–'}
               </span>
             </div>
             {(!battleStats || battleStats.matches === 0) && (
               <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
-                아직 배틀 전적이 없어요. 배틀에 참여하면 이번 시즌 전적·승률이 여기 쌓여요.
+                {t('profile.noBattleRecord')}
               </p>
             )}
           </motion.div>
@@ -417,17 +419,17 @@ export default function ProfilePage() {
             className="card"
           >
             <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-white/40 tracking-wider">📜 최근 참여 이력</div>
+              <div className="text-xs text-white/40 tracking-wider">📜 {t('profile.recentHistory')}</div>
               {history && history.length > 0 && (
-                <div className="text-xs text-white/40">최근 {history.length}판</div>
+                <div className="text-xs text-white/40">{t('profile.recentCount', { n: history.length })}</div>
               )}
             </div>
             {history === null ? (
-              <div className="text-center text-white/40 text-sm py-10">불러오는 중...</div>
+              <div className="text-center text-white/40 text-sm py-10">{t('profile.loadingData')}</div>
             ) : history.length === 0 ? (
               <div className="text-center text-white/40 text-sm py-12 leading-relaxed">
-                아직 기록이 없어요.<br />
-                <span className="text-[11px]">랭킹 리그에서 플레이하면 여기에 쌓여요 (연습 리그는 미집계)</span>
+                {t('profile.noHistory')}<br />
+                <span className="text-[11px]">{t('profile.noHistoryHint')}</span>
               </div>
             ) : (
               <ul className="divide-y divide-white/10 max-h-[36rem] overflow-y-auto -mx-1 px-1">
@@ -436,7 +438,7 @@ export default function ProfilePage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold truncate">{h.category_name}</div>
                       <div className="text-[10px] text-white/40 tabular-nums">
-                        {shortDate(h.reg_date)} · 콤보 {h.max_combo} · 정확도 {Math.round(h.accuracy * 100)}%
+                        {shortDate(h.reg_date)} · {t('profile.combo', { n: h.max_combo })} · {t('profile.accuracy', { n: Math.round(h.accuracy * 100) })}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
@@ -456,11 +458,11 @@ export default function ProfilePage() {
             transition={{ delay: 0.06 }}
             className="card"
           >
-            <div className="text-xs text-white/40 tracking-wider mb-3">🔒 비밀번호 변경</div>
+            <div className="text-xs text-white/40 tracking-wider mb-3">🔒 {t('profile.changePassword')}</div>
             {user.provider !== 'email' ? (
               <p className="text-sm text-white/40 leading-relaxed py-2">
-                소셜 로그인({user.provider}) 계정은 비밀번호가 없어요.<br />
-                해당 서비스에서 로그인하세요.
+                {t('profile.socialNoPassword', { provider: user.provider })}<br />
+                {t('profile.socialLoginHint')}
               </p>
             ) : (
               <form onSubmit={onChangePassword} className="space-y-3">
@@ -470,7 +472,7 @@ export default function ProfilePage() {
                   required
                   value={curPw}
                   onChange={(e) => setCurPw(e.target.value)}
-                  placeholder="현재 비밀번호"
+                  placeholder={t('profile.currentPassword')}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
                 />
                 <input
@@ -480,7 +482,7 @@ export default function ProfilePage() {
                   minLength={6}
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
-                  placeholder="새 비밀번호 (6자 이상)"
+                  placeholder={t('profile.newPassword')}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
                 />
                 <input
@@ -490,13 +492,13 @@ export default function ProfilePage() {
                   minLength={6}
                   value={newPwConfirm}
                   onChange={(e) => setNewPwConfirm(e.target.value)}
-                  placeholder="새 비밀번호 확인"
+                  placeholder={t('profile.confirmNewPassword')}
                   className={`w-full px-4 py-2.5 rounded-xl bg-white/10 border outline-none focus:border-white/50 ${
                     pwMismatch ? 'border-red-400/60' : 'border-white/20'
                   }`}
                 />
                 {pwMismatch && (
-                  <span className="text-[11px] text-red-400 block">새 비밀번호가 일치하지 않아요</span>
+                  <span className="text-[11px] text-red-400 block">{t('profile.errNewPwMismatch')}</span>
                 )}
                 {pwErr && <p className="text-sm text-red-400">{pwErr}</p>}
                 {pwOk && <p className="text-sm text-emerald-300">✓ {pwOk}</p>}
@@ -505,7 +507,7 @@ export default function ProfilePage() {
                   disabled={pwBusy}
                   className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {pwBusy ? '변경 중...' : '비밀번호 변경'}
+                  {pwBusy ? t('profile.changing') : t('profile.changePassword')}
                 </button>
               </form>
             )}
@@ -542,8 +544,9 @@ function BattleStat({ label, value, valueCls = '' }: { label: string; value: str
 }
 
 function ProviderBadge({ provider }: { provider: string }) {
+  const { t } = useTranslation();
   const map: Record<string, { label: string; cls: string }> = {
-    email:  { label: '✉ 이메일', cls: 'bg-white/10 text-white/70' },
+    email:  { label: t('profile.providerEmail'), cls: 'bg-white/10 text-white/70' },
     google: { label: 'G Google', cls: 'bg-white/90 text-zinc-900' },
     kakao:  { label: '💬 Kakao', cls: 'bg-yellow-400/90 text-zinc-900' },
     naver:  { label: 'N Naver',  cls: 'bg-green-500/90 text-white' },

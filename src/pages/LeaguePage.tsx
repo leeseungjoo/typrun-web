@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { Category } from '../api/types';
 import CoverFlow from '../components/league/CoverFlow';
@@ -9,6 +10,7 @@ type Tab = 'practice' | 'ranking';
 
 export default function LeaguePage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const [cats, setCats] = useState<Category[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [load, setLoad] = useState(true);
@@ -42,37 +44,37 @@ export default function LeaguePage() {
 
   return (
     <div className="min-h-screen px-4 pt-16 pb-10 max-w-5xl mx-auto flex flex-col">
-      <h2 className="text-2xl font-bold text-center mb-1">리그 선택</h2>
+      <h2 className="text-2xl font-bold text-center mb-1">{t('league.selectLeague')}</h2>
       <p className="text-center text-sm text-white/45 mb-6">
-        {tab === 'practice' ? '천천히 연습하고 실력을 키워요' : '매월 1일 초기화 · 전국 랭킹에 도전'}
+        {tab === 'practice' ? t('league.practiceSubtitle') : t('league.rankingSubtitle')}
       </p>
 
       {/* 카테고리 탭(랭킹/연습) + 홈·새로고침 */}
       <div className="mb-8 flex items-center justify-center gap-2 flex-wrap">
         <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
-          <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label="🏅 랭킹 리그" count={ranking.length} />
-          <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label="🌱 연습 리그" count={practice.length} />
+          <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label={t('league.rankingLeagueTab')} count={ranking.length} />
+          <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label={t('league.practiceLeagueTab')} count={practice.length} />
         </div>
         <button
           onClick={() => nav('/')}
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition"
-          title="홈"
-          aria-label="홈으로"
+          title={t('league.home')}
+          aria-label={t('league.goHome')}
         >
           🏠
         </button>
         <button
           onClick={() => setReloadKey((k) => k + 1)}
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition text-lg"
-          title="새로고침"
-          aria-label="새로고침"
+          title={t('league.refresh')}
+          aria-label={t('league.refresh')}
         >
           ↻
         </button>
       </div>
 
-      {load && <p className="text-center text-white/50">불러오는 중...</p>}
-      {err && <p className="text-center text-red-400">에러: {err}</p>}
+      {load && <p className="text-center text-white/50">{t('league.loading')}</p>}
+      {err && <p className="text-center text-red-400">{t('league.error', { msg: err })}</p>}
 
       {!load && !err && (
         <div className="flex-1 flex items-center">

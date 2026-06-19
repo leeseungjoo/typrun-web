@@ -1,30 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { pickProfileImage } from '../api/auth';
 import ContactModal from '../components/ContactModal';
 import type { Category, RankingEntry, BattleRankEntry } from '../api/types';
 
-function relativeTime(input: string): string {
+function relativeTime(input: string, t: TFunction): string {
   if (!input) return '';
   const ts = Date.parse(input);
   if (Number.isNaN(ts)) return input;
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return '방금 전';
+  if (sec < 60) return t('rankings.justNow');
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}분 전`;
+  if (min < 60) return t('rankings.minutesAgo', { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
+  if (hr < 24) return t('rankings.hoursAgo', { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  return new Date(ts).toLocaleDateString('ko-KR');
+  if (day < 7) return t('rankings.daysAgo', { n: day });
+  return new Date(ts).toLocaleDateString();
 }
 
 type View = 'score' | 'battle';
 
 export default function RankingsPage() {
+  const { t } = useTranslation();
   const { categorySeq } = useParams();
   const nav = useNavigate();
 
@@ -110,27 +113,27 @@ export default function RankingsPage() {
   return (
     <div className="min-h-screen px-5 pt-16 pb-8 max-w-3xl mx-auto">
       {/* 헤더 — 홈은 공용 상단바(우상단)에 있으므로 제목만 */}
-      <h2 className="text-2xl font-bold tracking-tight text-center mb-4">🏆 랭킹</h2>
+      <h2 className="text-2xl font-bold tracking-tight text-center mb-4">🏆 {t('rankings.title')}</h2>
 
       {/* 뷰 탭(점수/배틀) + 우측 홈·새로고침 */}
       <div className="mb-5 flex items-center justify-center gap-2">
         <div className="flex flex-1 max-w-xs rounded-full border border-white/15 bg-white/5 p-1">
-          <RankTab active={view === 'score'} onClick={() => setView('score')} label="🏅 점수" />
-          <RankTab active={view === 'battle'} onClick={() => setView('battle')} label="⚔️ 배틀" />
+          <RankTab active={view === 'score'} onClick={() => setView('score')} label={`🏅 ${t('rankings.tabScore')}`} />
+          <RankTab active={view === 'battle'} onClick={() => setView('battle')} label={`⚔️ ${t('rankings.tabBattle')}`} />
         </div>
         <button
           onClick={() => nav('/')}
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition"
-          title="홈"
-          aria-label="홈으로"
+          title={t('rankings.home')}
+          aria-label={t('rankings.goHome')}
         >
           🏠
         </button>
         <button
           onClick={() => setReloadKey((k) => k + 1)}
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition text-lg"
-          title="새로고침"
-          aria-label="새로고침"
+          title={t('rankings.refresh')}
+          aria-label={t('rankings.refresh')}
         >
           ↻
         </button>
@@ -145,21 +148,21 @@ export default function RankingsPage() {
                 disabled={!canPrev}
                 onClick={() => setIdx((i) => Math.max(0, i - 1))}
                 className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
-                aria-label="이전 리그"
+                aria-label={t('rankings.prevLeague')}
               >
                 ◀
               </button>
               <div className="text-center min-w-0">
                 <div className="text-xs text-white/40 tracking-wider mb-0.5">
-                  리그 {idx + 1} / {leagues.length}
+                  {t('rankings.leagueCount', { current: idx + 1, total: leagues.length })}
                   {current.status === 'ended' && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded bg-white/10 text-white/60">종료</span>
+                    <span className="ml-2 px-1.5 py-0.5 rounded bg-white/10 text-white/60">{t('rankings.ended')}</span>
                   )}
                 </div>
                 <div className="text-lg font-bold truncate">{current.name}</div>
                 {scoreMeta?.start && scoreMeta?.end && (
                   <div className="text-[11px] text-white/45 mt-0.5">
-                    🗓 {scoreMeta.mode === 'event' ? '이벤트 집계' : '시즌'} {scoreMeta.start} ~ {scoreMeta.end}
+                    🗓 {scoreMeta.mode === 'event' ? t('rankings.eventTally') : t('rankings.season')} {scoreMeta.start} ~ {scoreMeta.end}
                   </div>
                 )}
               </div>
@@ -167,7 +170,7 @@ export default function RankingsPage() {
                 disabled={!canNext}
                 onClick={() => setIdx((i) => Math.min(leagues.length - 1, i + 1))}
                 className="text-2xl px-2 disabled:opacity-20 hover:text-violet-300 transition"
-                aria-label="다음 리그"
+                aria-label={t('rankings.nextLeague')}
               >
                 ▶
               </button>
@@ -177,7 +180,7 @@ export default function RankingsPage() {
           {eventBanner}
 
           {leagues.length === 0 && !scoreErr && (
-            <div className="text-center py-16 text-white/50">운영 중인 랭킹 리그가 없어요.</div>
+            <div className="text-center py-16 text-white/50">{t('rankings.noActiveLeague')}</div>
           )}
 
           {current && (
@@ -196,11 +199,11 @@ export default function RankingsPage() {
             <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
               {current && (
                 <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
-                  🎮 도전하기
+                  🎮 {t('rankings.challenge')}
                 </button>
               )}
-              <button className="btn-ghost" onClick={() => nav('/league')}>리그 선택</button>
-              <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 문의</button>
+              <button className="btn-ghost" onClick={() => nav('/league')}>{t('rankings.selectLeague')}</button>
+              <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 {t('rankings.inquiry')}</button>
             </div>
           )}
         </>
@@ -240,6 +243,7 @@ function RankTab({ active, onClick, label }: { active: boolean; onClick: () => v
 /* ====================== 배틀 랭킹(시즌 누적 — 전 리그 통합) ====================== */
 
 function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadKey: number }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<BattleRankEntry[]>([]);
   const [load, setLoad] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -254,7 +258,7 @@ function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadK
   }, [reloadKey]);
 
   if (load) {
-    return <div className="min-h-[280px] flex items-center justify-center text-white/50">불러오는 중...</div>;
+    return <div className="min-h-[280px] flex items-center justify-center text-white/50">{t('rankings.loading')}</div>;
   }
   if (err) {
     return (
@@ -267,11 +271,11 @@ function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadK
     return (
       <div className="card text-center py-12">
         <div className="text-5xl mb-3" aria-hidden>⚔️</div>
-        <p className="text-lg font-bold mb-1">아직 배틀 기록이 없어요</p>
+        <p className="text-lg font-bold mb-1">{t('rankings.noBattleRecord')}</p>
         <p className="text-sm text-white/55 leading-relaxed mb-6">
-          실시간 배틀에 참여하면 이번 시즌 전적과 승점이<br />여기 순위로 쌓여요.
+          {t('rankings.noBattleRecordLine1')}<br />{t('rankings.noBattleRecordLine2')}
         </p>
-        <button className="btn-primary" onClick={onLeague}>⚔️ 배틀하러 가기</button>
+        <button className="btn-primary" onClick={onLeague}>⚔️ {t('rankings.goBattle')}</button>
       </div>
     );
   }
@@ -280,7 +284,7 @@ function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadK
   const rest = rows.slice(3);
   return (
     <>
-      <p className="text-center text-xs text-white/40 mb-4">⚔️ 이번 시즌 배틀 랭킹 · 승점(승 3 · 무 1) 순</p>
+      <p className="text-center text-xs text-white/40 mb-4">⚔️ {t('rankings.battleSeasonCaption')}</p>
       {top3.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           {top3.map((r, i) => (
@@ -297,9 +301,9 @@ function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadK
                 <Avatar entry={r} size={32} />
                 <span className="flex-1 font-semibold truncate ml-2">{r.nickname}</span>
                 <span className="text-right ml-2">
-                  <div className="font-bold tabular-nums">{r.points}점</div>
+                  <div className="font-bold tabular-nums">{t('rankings.points', { n: r.points })}</div>
                   <div className="text-[10px] text-white/40 tabular-nums">
-                    {r.wins}승 {r.losses}패 {r.draws}무 · {Math.round(r.win_rate)}%
+                    {t('rankings.battleRecord', { wins: r.wins, losses: r.losses, draws: r.draws, rate: Math.round(r.win_rate) })}
                   </div>
                 </span>
               </li>
@@ -308,13 +312,14 @@ function BattleRankings({ onLeague, reloadKey }: { onLeague: () => void; reloadK
         </div>
       )}
       <div className="flex justify-center mt-8">
-        <button className="btn-primary" onClick={onLeague}>⚔️ 배틀하러 가기</button>
+        <button className="btn-primary" onClick={onLeague}>⚔️ {t('rankings.goBattle')}</button>
       </div>
     </>
   );
 }
 
 function BattlePodiumCard({ entry, index }: { entry: BattleRankEntry; index: number }) {
+  const { t } = useTranslation();
   const s = PODIUM_STYLE[index] ?? PODIUM_STYLE[2];
   const isFirst = index === 0;
   return (
@@ -334,9 +339,9 @@ function BattlePodiumCard({ entry, index }: { entry: BattleRankEntry; index: num
           <div className="text-base font-bold truncate">{entry.nickname}</div>
         </div>
       </div>
-      <div className={`text-2xl font-extrabold tabular-nums ${s.text}`}>{entry.points}점</div>
+      <div className={`text-2xl font-extrabold tabular-nums ${s.text}`}>{t('rankings.points', { n: entry.points })}</div>
       <div className="text-[10px] text-white/40 mt-1 tabular-nums">
-        {entry.wins}승 {entry.losses}패 {entry.draws}무 · {Math.round(entry.win_rate)}%
+        {t('rankings.battleRecord', { wins: entry.wins, losses: entry.losses, draws: entry.draws, rate: Math.round(entry.win_rate) })}
       </div>
     </motion.div>
   );
@@ -359,6 +364,7 @@ function ScoreRankings({
   onPlay: () => void;
   onSelect: (e: RankingEntry) => void;
 }) {
+  const { t } = useTranslation();
   const top3 = rows.slice(0, 3);
   const rest = rows.slice(3);
 
@@ -366,24 +372,24 @@ function ScoreRankings({
   if (load) {
     return (
       <div className="min-h-[280px] flex items-center justify-center text-white/50">
-        불러오는 중...
+        {t('rankings.loading')}
       </div>
     );
   }
   if (err) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-400 mb-3">에러: {err}</p>
-        <button className="btn-ghost text-sm" onClick={onRetry}>다시 시도</button>
+        <p className="text-red-400 mb-3">{t('rankings.errorPrefix', { msg: err })}</p>
+        <button className="btn-ghost text-sm" onClick={onRetry}>{t('rankings.retry')}</button>
       </div>
     );
   }
   if (rows.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-white/50 mb-2">아직 기록이 없어요.</p>
-        <p className="text-white/40 text-sm mb-6">첫 기록의 주인공이 되어보세요!</p>
-        <button className="btn-primary" onClick={onPlay}>🎮 도전하기</button>
+        <p className="text-white/50 mb-2">{t('rankings.noScoreRecord')}</p>
+        <p className="text-white/40 text-sm mb-6">{t('rankings.beFirst')}</p>
+        <button className="btn-primary" onClick={onPlay}>🎮 {t('rankings.challenge')}</button>
       </div>
     );
   }
@@ -412,7 +418,7 @@ function ScoreRankings({
                 <span className="text-right ml-2">
                   <div className="font-bold tabular-nums">{r.best_score.toLocaleString()}</div>
                   <div className="text-[10px] text-white/40">
-                    {r.play_count}판 · {relativeTime(r.updated_at)}
+                    {t('rankings.plays', { n: r.play_count })} · {relativeTime(r.updated_at, t)}
                   </div>
                 </span>
               </li>
@@ -441,6 +447,7 @@ function PodiumCard({
   index: number;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const s = PODIUM_STYLE[index] ?? PODIUM_STYLE[2];
   const isFirst = index === 0;
   return (
@@ -465,7 +472,7 @@ function PodiumCard({
         {entry.best_score.toLocaleString()}
       </div>
       <div className="text-[10px] text-white/40 mt-1">
-        {entry.play_count}판 · {relativeTime(entry.updated_at)}
+        {t('rankings.plays', { n: entry.play_count })} · {relativeTime(entry.updated_at, t)}
       </div>
     </motion.div>
   );
@@ -494,6 +501,7 @@ function Avatar({
 }
 
 function DetailModal({ entry, onClose }: { entry: RankingEntry; onClose: () => void }) {
+  const { t } = useTranslation();
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -526,22 +534,22 @@ function DetailModal({ entry, onClose }: { entry: RankingEntry; onClose: () => v
             {entry.bio}
           </div>
         ) : (
-          <div className="text-center text-xs text-white/30 mb-4">자기소개가 없어요</div>
+          <div className="text-center text-xs text-white/30 mb-4">{t('rankings.noBio')}</div>
         )}
 
         <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
           <div className="text-center">
-            <div className="text-xs text-white/40 tracking-wider">최고 점수</div>
+            <div className="text-xs text-white/40 tracking-wider">{t('rankings.bestScore')}</div>
             <div className="text-lg font-bold tabular-nums mt-0.5">{entry.best_score.toLocaleString()}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-white/40 tracking-wider">플레이</div>
-            <div className="text-lg font-bold tabular-nums mt-0.5">{entry.play_count}판</div>
+            <div className="text-xs text-white/40 tracking-wider">{t('rankings.play')}</div>
+            <div className="text-lg font-bold tabular-nums mt-0.5">{t('rankings.plays', { n: entry.play_count })}</div>
           </div>
         </div>
 
         <div className="text-center text-[10px] text-white/30 mt-3">
-          최근 갱신: {relativeTime(entry.updated_at)}
+          {t('rankings.lastUpdated', { time: relativeTime(entry.updated_at, t) })}
         </div>
       </motion.div>
     </motion.div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../api/auth';
 
@@ -9,6 +10,7 @@ import { authApi } from '../api/auth';
  * 비로그인 시: 로그인 유도 버튼.
  */
 export default function InviteLink({ className = '' }: { className?: string }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
@@ -53,8 +55,8 @@ export default function InviteLink({ className = '' }: { className?: string }) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'TypRun 같이 해요!',
-          text: `${user?.nickname}님이 TypRun 초대장을 보냈어요. 떨어지는 단어 타자게임 🎮`,
+          title: t('widgets.inviteShareTitle'),
+          text: t('widgets.inviteShareText', { name: user?.nickname }),
           url: inviteUrl,
         });
       } catch { /* 사용자 취소 등 */ }
@@ -67,13 +69,13 @@ export default function InviteLink({ className = '' }: { className?: string }) {
   if (!user) {
     return (
       <div className={`card text-center ${className}`}>
-        <div className="text-xs text-white/40 tracking-wider mb-3">🎁 친구 초대</div>
+        <div className="text-xs text-white/40 tracking-wider mb-3">🎁 {t('widgets.inviteFriends')}</div>
         <button
           type="button"
           onClick={() => nav('/login', { state: { from: loc.pathname } })}
           className="btn-primary text-sm"
         >
-          🔑 로그인하고 친구초대 링크 복사하기
+          🔑 {t('widgets.inviteLoginCta')}
         </button>
       </div>
     );
@@ -82,10 +84,10 @@ export default function InviteLink({ className = '' }: { className?: string }) {
   return (
     <div className={`card ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-white/40 tracking-wider">🎁 친구 초대</div>
+        <div className="text-xs text-white/40 tracking-wider">🎁 {t('widgets.inviteFriends')}</div>
         {invitedCount !== null && (
           <div className="text-xs text-white/70">
-            초대한 친구 <span className="font-bold text-white">{invitedCount}</span>명
+            {t('widgets.inviteCountPrefix')} <span className="font-bold text-white">{invitedCount}</span>{t('widgets.inviteCountSuffix')}
           </div>
         )}
       </div>
@@ -101,18 +103,18 @@ export default function InviteLink({ className = '' }: { className?: string }) {
           onClick={copyInviteUrl}
           className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-xs font-bold hover:bg-white/20 transition shrink-0"
         >
-          {copied ? '✓ 복사됨' : '복사'}
+          {copied ? `✓ ${t('widgets.copied')}` : t('widgets.copy')}
         </button>
         <button
           type="button"
           onClick={shareInvite}
           className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:brightness-110 transition shrink-0"
         >
-          공유
+          {t('widgets.share')}
         </button>
       </div>
       <div className="text-[10px] text-white/40 mt-2 leading-relaxed">
-        이 링크로 친구가 가입하면 카운트 +1. 시즌별 친구초대 이벤트에 반영
+        {t('widgets.inviteCountHint')}
       </div>
     </div>
   );

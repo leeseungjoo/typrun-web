@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../api/auth';
 
@@ -8,19 +9,20 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 type Provider = 'google' | 'kakao' | 'naver';
 
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  no_code: '인증 코드를 받지 못했어요',
-  invalid_state: '보안 토큰 불일치 — 다시 시도해주세요',
-  token_failed: '토큰 발급 실패',
-  no_profile: '프로필 조회 실패',
-  email_taken: '이미 다른 방법으로 가입된 이메일입니다',
-  create_failed: '회원 생성 실패',
+const AUTH_ERROR_KEYS: Record<string, string> = {
+  no_code: 'auth.errNoCode',
+  invalid_state: 'auth.errInvalidState',
+  token_failed: 'auth.errTokenFailed',
+  no_profile: 'auth.errNoProfile',
+  email_taken: 'auth.errEmailTaken',
+  create_failed: 'auth.errCreateFailed',
 };
 
 export default function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
   const [params] = useSearchParams();
+  const { t } = useTranslation();
   const { loginEmail, signupEmail, refresh } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -42,7 +44,7 @@ export default function LoginPage() {
     setErr(null);
     try {
       await authApi.resendVerification(target);
-      setResendMsg('인증 메일을 다시 보냈어요. 메일함을 확인해주세요.');
+      setResendMsg(t('auth.resendDone'));
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : String(e2));
     }
@@ -63,24 +65,24 @@ export default function LoginPage() {
       refresh().then(() => nav(target, { replace: true }));
     } else if (authErr) {
       const via = params.get('via');
-      const baseMsg = AUTH_ERROR_MESSAGES[authErr] ?? `오류: ${authErr}`;
+      const baseMsg = AUTH_ERROR_KEYS[authErr] ? t(AUTH_ERROR_KEYS[authErr]) : t('auth.errGeneric', { code: authErr });
       setErr(via ? `${baseMsg} (${via})` : baseMsg);
     }
 
     // 이메일 인증 결과 (verify_email.jsp 리다이렉트)
     const verified = params.get('verified');
     const verifyErr = params.get('verify_error');
-    if (params.get('reset') === 'ok') setNotice('✅ 비밀번호가 변경됐어요. 새 비밀번호로 로그인하세요.');
-    if (verified === 'ok') setNotice('✅ 이메일 인증 완료! 이제 로그인하세요.');
-    else if (verified === 'already') setNotice('이미 인증된 계정이에요. 로그인하세요.');
+    if (params.get('reset') === 'ok') setNotice(t('auth.noticeResetDone'));
+    if (verified === 'ok') setNotice(t('auth.noticeVerifyDone'));
+    else if (verified === 'already') setNotice(t('auth.noticeAlreadyVerified'));
     else if (verifyErr) {
       const m: Record<string, string> = {
-        invalid: '인증 링크가 올바르지 않아요.',
-        used: '이미 사용된 링크예요. 로그인해보세요.',
-        expired: '인증 링크가 만료됐어요. 재전송해 주세요.',
-        server: '인증 처리 중 오류가 발생했어요.',
+        invalid: 'auth.verifyErrInvalid',
+        used: 'auth.verifyErrUsed',
+        expired: 'auth.verifyErrExpired',
+        server: 'auth.verifyErrServer',
       };
-      setErr(m[verifyErr] ?? '인증에 실패했어요.');
+      setErr(m[verifyErr] ? t(m[verifyErr]) : t('auth.verifyErrGeneric'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,15 +108,15 @@ export default function LoginPage() {
     if (mode === 'signup') {
       const nick = nickname.trim();
       if (nick.length < 2 || nick.length > 20) {
-        setErr('닉네임은 2~20자여야 해요');
+        setErr(t('auth.nicknameLength'));
         return;
       }
       if (password.length < 6) {
-        setErr('비밀번호는 6자 이상이어야 해요');
+        setErr(t('auth.passwordTooShort'));
         return;
       }
       if (password !== passwordConfirm) {
-        setErr('비밀번호가 일치하지 않아요');
+        setErr(t('auth.passwordMismatch'));
         return;
       }
     }
@@ -137,7 +139,7 @@ export default function LoginPage() {
           // 인증 대기 화면
           setPendingEmail(res.email);
           if (res.mail_sent === false) {
-            setErr('가입은 됐지만 메일 발송에 실패했어요. 아래에서 재전송해 주세요.');
+            setErr(t('auth.signupMailFailed'));
           }
         }
       } else {
@@ -165,7 +167,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-black tracking-tight text-center mb-1">
           Typ<span className="text-primary">Run</span>
         </h1>
-        <p className="text-center text-white/40 text-sm mb-8">로그인하고 랭킹 도전!</p>
+        <p className="text-center text-white/40 text-sm mb-8">{t('auth.loginSubtitle')}</p>
 
         {notice && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm text-center">
@@ -176,10 +178,10 @@ export default function LoginPage() {
         {pendingEmail ? (
           <div className="text-center">
             <div className="text-5xl mb-4">📧</div>
-            <h2 className="text-lg font-bold mb-2">인증 메일을 보냈어요</h2>
+            <h2 className="text-lg font-bold mb-2">{t('auth.verifyMailSentTitle')}</h2>
             <p className="text-sm text-white/60 leading-relaxed mb-5">
-              <b className="text-white/80">{pendingEmail}</b> 로 보낸<br />
-              인증 링크를 누르면 가입이 완료됩니다.
+              <b className="text-white/80">{pendingEmail}</b>{t('auth.verifyMailSentTo')}<br />
+              {t('auth.verifyMailSentBody')}
             </p>
             {err && <p className="text-sm text-red-400 mb-3">{err}</p>}
             {resendMsg && <p className="text-sm text-emerald-300 mb-3">{resendMsg}</p>}
@@ -188,7 +190,7 @@ export default function LoginPage() {
               className="btn-ghost text-sm w-full mb-2"
               onClick={() => onResend(pendingEmail)}
             >
-              인증 메일 재전송
+              {t('auth.resendVerifyMail')}
             </button>
             <button
               type="button"
@@ -200,7 +202,7 @@ export default function LoginPage() {
                 setResendMsg(null);
               }}
             >
-              ← 로그인 화면으로
+              {t('auth.backToLoginScreen')}
             </button>
           </div>
         ) : (
@@ -221,19 +223,19 @@ export default function LoginPage() {
               className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] ${p.cls}`}
             >
               <span className="text-base">{p.icon}</span>
-              {p.name}로 계속하기
+              {t('auth.continueWith', { provider: p.name })}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-3 my-6 text-white/30 text-xs">
           <div className="flex-1 h-px bg-white/15" />
-          <span>{mode === 'signup' ? '이메일로 회원가입' : '또는 이메일 로그인'}</span>
+          <span>{mode === 'signup' ? t('auth.dividerSignup') : t('auth.dividerLogin')}</span>
           <div className="flex-1 h-px bg-white/15" />
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <Field label="이메일">
+          <Field label={t('auth.email')}>
             <input
               type="email"
               autoComplete="email"
@@ -246,7 +248,7 @@ export default function LoginPage() {
           </Field>
 
           {mode === 'signup' && (
-            <Field label="닉네임">
+            <Field label={t('auth.nickname')}>
               <input
                 type="text"
                 autoComplete="nickname"
@@ -256,12 +258,12 @@ export default function LoginPage() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
-                placeholder="2~20자"
+                placeholder={t('auth.nicknamePlaceholder')}
               />
             </Field>
           )}
 
-          <Field label="비밀번호">
+          <Field label={t('auth.password')}>
             <input
               type="password"
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
@@ -270,12 +272,12 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50"
-              placeholder={mode === 'signup' ? '6자 이상' : ''}
+              placeholder={mode === 'signup' ? t('auth.passwordPlaceholder') : ''}
             />
           </Field>
 
           {mode === 'signup' && (
-            <Field label="비밀번호 확인">
+            <Field label={t('auth.passwordConfirm')}>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -288,10 +290,10 @@ export default function LoginPage() {
                     ? 'border-red-400/60'
                     : 'border-white/20'
                 }`}
-                placeholder="비밀번호 재입력"
+                placeholder={t('auth.passwordRetypePlaceholder')}
               />
               {passwordConfirm.length > 0 && password !== passwordConfirm && (
-                <span className="text-[11px] text-red-400 mt-1 block">비밀번호가 일치하지 않아요</span>
+                <span className="text-[11px] text-red-400 mt-1 block">{t('auth.passwordMismatch')}</span>
               )}
             </Field>
           )}
@@ -302,7 +304,7 @@ export default function LoginPage() {
               className="text-xs text-white/40 hover:text-white/70 self-end -mt-1"
               onClick={() => nav('/forgot-password')}
             >
-              비밀번호를 잊으셨나요?
+              {t('auth.forgotPassword')}
             </button>
           )}
 
@@ -315,7 +317,7 @@ export default function LoginPage() {
                 className="text-xs text-primary hover:underline"
                 onClick={() => onResend(needVerifyEmail)}
               >
-                인증 메일 재전송
+                {t('auth.resendVerifyMail')}
               </button>
               {resendMsg && <p className="text-xs text-emerald-300 mt-1">{resendMsg}</p>}
             </div>
@@ -326,7 +328,7 @@ export default function LoginPage() {
             disabled={busy}
             className="btn-primary mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {busy ? '처리 중...' : mode === 'signup' ? '회원가입' : '로그인'}
+            {busy ? t('auth.processing') : mode === 'signup' ? t('auth.signUp') : t('auth.logIn')}
           </button>
 
           <button
@@ -338,8 +340,8 @@ export default function LoginPage() {
             }}
           >
             {mode === 'login'
-              ? '계정이 없으신가요? 이메일로 회원가입 →'
-              : '← 이미 계정이 있으신가요? 로그인'}
+              ? t('auth.toSignup')
+              : t('auth.toLogin')}
           </button>
 
           <button
@@ -347,20 +349,20 @@ export default function LoginPage() {
             className="text-xs text-white/40 hover:text-white/70 mt-1"
             onClick={() => nav('/')}
           >
-            비회원으로 둘러보기
+            {t('auth.browseAsGuest')}
           </button>
         </form>
 
         <p className="text-center text-xs text-white/40 mt-8 leading-relaxed">
-          소셜 로그인은 처음 사용 시 자동 가입됩니다 <br />
-          이메일 가입은 인증 메일의 링크를 눌러야 완료됩니다
+          {t('auth.footerSocialHint')} <br />
+          {t('auth.footerEmailHint')}
         </p>
         <p className="text-center text-[11px] text-white/35 mt-3 leading-relaxed">
-          가입 시{' '}
-          <button type="button" onClick={() => nav('/terms')} className="underline hover:text-white/70">이용약관</button>
-          {' '}및{' '}
-          <button type="button" onClick={() => nav('/privacy')} className="underline hover:text-white/70">개인정보처리방침</button>
-          에 동의하게 됩니다
+          {t('auth.agreePrefix')}{' '}
+          <button type="button" onClick={() => nav('/terms')} className="underline hover:text-white/70">{t('auth.terms')}</button>
+          {' '}{t('auth.agreeAnd')}{' '}
+          <button type="button" onClick={() => nav('/privacy')} className="underline hover:text-white/70">{t('auth.privacy')}</button>
+          {t('auth.agreeSuffix')}
         </p>
         </>
         )}

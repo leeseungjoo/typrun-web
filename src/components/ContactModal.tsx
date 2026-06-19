@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { ContactForm } from '../api/types';
 
@@ -9,12 +10,6 @@ interface ContactModalProps {
 }
 
 type Status = 'idle' | 'sending' | 'done' | 'error';
-
-const KINDS: Array<{ value: ContactForm['kind']; label: string }> = [
-  { value: 'inquiry', label: '문의' },
-  { value: 'bug', label: '오류신고' },
-  { value: 'collab', label: '콜라보·협업' },
-];
 
 // 도배 방지: 한 번 보내면 3분간 재전송 불가 (서버에서도 IP 기준 차단)
 const COOLDOWN_MS = 3 * 60 * 1000;
@@ -30,6 +25,12 @@ function remainingCooldownSec(): number {
 }
 
 export default function ContactModal({ onClose, defaultKind = 'inquiry' }: ContactModalProps) {
+  const { t } = useTranslation();
+  const KINDS: Array<{ value: ContactForm['kind']; label: string }> = [
+    { value: 'inquiry', label: t('widgets.contactKindInquiry') },
+    { value: 'bug', label: t('widgets.contactKindBug') },
+    { value: 'collab', label: t('widgets.contactKindCollab') },
+  ];
   const [kind, setKind] = useState<ContactForm['kind']>(defaultKind);
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -67,7 +68,7 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
       setStatus('done');
     } catch (e) {
       setStatus('error');
-      setErrMsg(e instanceof Error ? e.message : '전송에 실패했어요');
+      setErrMsg(e instanceof Error ? e.message : t('widgets.contactSendFailed'));
       // 서버가 쿨다운으로 막은 경우에도 클라 쿨다운 동기화
       setCooldown(remainingCooldownSec());
     }
@@ -76,7 +77,9 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
   const cooldownLabel = (() => {
     const m = Math.floor(cooldown / 60);
     const s = cooldown % 60;
-    return m > 0 ? `${m}분 ${s}초` : `${s}초`;
+    return m > 0
+      ? t('widgets.cooldownMinSec', { m, s })
+      : t('widgets.cooldownSec', { s });
   })();
 
   return (
@@ -97,16 +100,16 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
         className="card w-full max-w-md"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">🤝 문의</h3>
+          <h3 className="text-lg font-bold">🤝 {t('widgets.inquiry')}</h3>
           <button onClick={onClose} className="text-white/60 hover:text-white text-xl leading-none">✕</button>
         </div>
 
         {status === 'done' ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-3">📨</div>
-            <p className="font-bold mb-1">문의가 접수되었어요!</p>
-            <p className="text-sm text-white/50 mb-6">담당자가 확인 후 회신드릴게요.</p>
-            <button className="btn-primary w-full" onClick={onClose}>닫기</button>
+            <p className="font-bold mb-1">{t('widgets.contactDoneTitle')}</p>
+            <p className="text-sm text-white/50 mb-6">{t('widgets.contactDoneDesc')}</p>
+            <button className="btn-primary w-full" onClick={onClose}>{t('widgets.close')}</button>
           </div>
         ) : (
           <>
@@ -128,19 +131,19 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
 
             <div className="space-y-2.5">
               <input
-                className="input w-full" placeholder="이름 / 담당자명 *"
+                className="input w-full" placeholder={t('widgets.contactNamePlaceholder')}
                 value={name} onChange={(e) => setName(e.target.value)} maxLength={50}
               />
               <input
-                className="input w-full" placeholder="회신받을 이메일 또는 연락처 *"
+                className="input w-full" placeholder={t('widgets.contactContactPlaceholder')}
                 value={contact} onChange={(e) => setContact(e.target.value)} maxLength={120}
               />
               <input
-                className="input w-full" placeholder="회사 / 브랜드명 (선택)"
+                className="input w-full" placeholder={t('widgets.contactCompanyPlaceholder')}
                 value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100}
               />
               <textarea
-                className="input w-full resize-none" rows={4} placeholder="문의 내용 (5자 이상) *"
+                className="input w-full resize-none" rows={4} placeholder={t('widgets.contactMessagePlaceholder')}
                 value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000}
               />
             </div>
@@ -153,15 +156,15 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
               onClick={submit}
             >
               {status === 'sending'
-                ? '전송 중...'
+                ? t('widgets.sending')
                 : cooldown > 0
-                ? `${cooldownLabel} 후 다시 보낼 수 있어요`
-                : '문의 보내기'}
+                ? t('widgets.contactCooldownNote', { label: cooldownLabel })
+                : t('widgets.contactSend')}
             </button>
             <p className="text-[11px] text-white/30 text-center mt-2">
               {cooldown > 0
-                ? '도배 방지를 위해 3분에 한 번만 보낼 수 있어요.'
-                : '접수 시 담당자 메일로 전달됩니다.'}
+                ? t('widgets.contactRateLimitHint')
+                : t('widgets.contactDeliveryHint')}
             </p>
           </>
         )}

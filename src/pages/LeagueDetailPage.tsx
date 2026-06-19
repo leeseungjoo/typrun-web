@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import type { Category } from '../api/types';
@@ -13,6 +14,7 @@ const BATTLE_ENABLED = true;
 // 랭킹전만 활성, 배틀은 ws 배포 후 오픈. 상단에 리그별 접속자 카운터.
 export default function LeagueDetailPage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const { categorySeq } = useParams();
   const seq = Number(categorySeq);
   const validSeq = Number.isFinite(seq) && seq > 0;
@@ -26,7 +28,7 @@ export default function LeagueDetailPage() {
     setCat(null);
     setErr(null);
     if (!validSeq) {
-      setErr('잘못된 리그입니다.');
+      setErr(t('league.invalidLeague'));
       setLoad(false);
       return;
     }
@@ -41,7 +43,7 @@ export default function LeagueDetailPage() {
       .catch((e) => {
         // 내부 경로/상태코드 노출 방지 — 상세는 콘솔에만.
         console.error('[LeagueDetailPage] 카테고리 로드 실패:', e);
-        if (alive) setErr('리그 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        if (alive) setErr(t('league.loadFailed'));
       })
       .finally(() => {
         if (alive) setLoad(false);
@@ -60,13 +62,13 @@ export default function LeagueDetailPage() {
         onClick={() => nav('/league')}
         className="text-sm text-white/50 hover:text-white mb-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
       >
-        ← 리그 목록
+        {t('league.backToList')}
       </button>
 
-      {load && <p className="text-center text-white/50">불러오는 중...</p>}
-      {err && <p className="text-center text-red-400">에러: {err}</p>}
+      {load && <p className="text-center text-white/50">{t('league.loading')}</p>}
+      {err && <p className="text-center text-red-400">{t('league.error', { msg: err })}</p>}
       {!load && !err && !cat && (
-        <p className="text-center text-white/50">리그를 찾을 수 없어요.</p>
+        <p className="text-center text-white/50">{t('league.notFound')}</p>
       )}
 
       {cat && (
@@ -77,7 +79,7 @@ export default function LeagueDetailPage() {
               <h2 className="text-2xl font-bold flex items-center gap-2 flex-wrap">
                 {cat.is_super_beginner === 'Y' && (
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-sky-500/25 border border-sky-400/50 text-sky-200">
-                    <span aria-hidden>🐣</span> 생초보
+                    <span aria-hidden>🐣</span> {t('league.beginner')}
                   </span>
                 )}
                 {cat.name}
@@ -91,41 +93,41 @@ export default function LeagueDetailPage() {
             )}
             {isComingSoon && cat.open_at && (
               <p className="text-xs text-amber-200/70 mb-3">
-                <span aria-hidden>🗓</span> {cat.open_at} 오픈 예정
+                <span aria-hidden>🗓</span> {t('league.openOn', { date: cat.open_at })}
               </p>
             )}
             <LiveCounter categorySeq={cat.seq} />
           </div>
 
           {/* 모드 선택 */}
-          <h3 className="text-sm font-bold text-white/50 mb-3 tracking-wider">플레이 모드</h3>
+          <h3 className="text-sm font-bold text-white/50 mb-3 tracking-wider">{t('league.playMode')}</h3>
           <div className="space-y-2.5">
             <ModeButton
               emoji="🏅"
-              title="랭킹전"
-              subtitle={playable ? '혼자 최고 기록에 도전' : '오픈 예정'}
+              title={t('league.rankingMatch')}
+              subtitle={playable ? t('league.rankingMatchDesc') : t('league.comingSoon')}
               ready={playable}
-              badge={!playable ? '오픈예정' : undefined}
+              badge={!playable ? t('league.comingSoonBadge') : undefined}
               onClick={() => nav(`/game/${cat.seq}`)}
             />
             <ModeButton
               emoji="⚔️"
-              title="배틀"
-              subtitle="실시간 1:1 대결 · 상대가 들어오면 자동 시작"
+              title={t('league.battle')}
+              subtitle={t('league.battleDesc')}
               ready={BATTLE_ENABLED && playable}
-              badge={!playable ? '오픈예정' : BATTLE_ENABLED ? '베타' : '곧 오픈'}
+              badge={!playable ? t('league.comingSoonBadge') : BATTLE_ENABLED ? t('league.beta') : t('league.comingSoon')}
               onClick={() => nav(`/battle/${cat.seq}/2p`)}
             />
           </div>
 
           <button onClick={() => nav(`/rankings/${cat.seq}`)} className="btn-ghost w-full mt-5">
-            🏆 이 리그 랭킹 보기
+            🏆 {t('league.viewLeagueRankings')}
           </button>
 
           <p className="text-[11px] text-white/55 text-center mt-3">
             {BATTLE_ENABLED
-              ? '실시간 배틀은 베타예요. 상대가 없으면 매칭이 지연될 수 있어요.'
-              : '실시간 배틀이 곧 열려요. 지금은 랭킹전으로 최고 기록에 도전하세요.'}
+              ? t('league.battleBetaNote')
+              : t('league.battleComingNote')}
           </p>
         </>
       )}

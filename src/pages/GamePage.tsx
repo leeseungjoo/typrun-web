@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
 import { sound } from '../lib/sound';
@@ -78,6 +79,7 @@ let _wid = 0;
 const newId = () => ++_wid;
 
 export default function GamePage() {
+  const { t } = useTranslation();
   const { categorySeq } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
@@ -91,7 +93,7 @@ export default function GamePage() {
   }, []);
   // 게임 중 이탈 — 점수 저장 안 됨 안내 후 이동
   const goWithConfirm = (path: string) => {
-    if (window.confirm('지금 나가면 점수가 저장되지 않아요. 정말 나갈까요?')) nav(path);
+    if (window.confirm(t('game.quitConfirm'))) nav(path);
   };
 
   const [words, setWords] = useState<Word[]>([]);
@@ -205,7 +207,7 @@ export default function GamePage() {
     ])
       .then(([res, cats]) => {
         if (!res.words || res.words.length === 0) {
-          setErr('단어 풀이 비어있어요');
+          setErr(t('game.emptyWordPool'));
           return;
         }
         const cat = cats.find((c) => c.seq === Number(categorySeq));
@@ -608,8 +610,8 @@ export default function GamePage() {
   if (err) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
-        <p className="text-red-400">에러: {err}</p>
-        <button className="btn-ghost" onClick={() => nav('/league')}>← 리그 선택</button>
+        <p className="text-red-400">{t('game.errorPrefix', { msg: err })}</p>
+        <button className="btn-ghost" onClick={() => nav('/league')}>{t('game.chooseLeague')}</button>
       </div>
     );
   }
@@ -617,7 +619,7 @@ export default function GamePage() {
   if (phase === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/60">
-        단어 풀 불러오는 중...
+        {t('game.loadingWordPool')}
       </div>
     );
   }
@@ -641,21 +643,21 @@ export default function GamePage() {
         )}
         {isSuperBeginner ? (
           <div className="px-4 py-2 rounded-xl bg-sky-500/15 border border-sky-400/40 text-sky-200 text-sm text-center">
-            🐣 생초보 모드 · 아주 천천히 · 단어도 드물게 · 생명 5개 · 글자 위치부터 천천히!
+            {t('game.superBeginnerBanner')}
           </div>
         ) : isPractice && (
           <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm text-center">
-            🌱 연습 리그 · 천천히 떨어져요 · 생명 5개 · 랭킹 미집계
+            {t('game.practiceBanner')}
           </div>
         )}
         <div className="flex flex-col items-center gap-1" role="status" aria-live="polite">
           <span className="text-7xl font-impact text-violet-200 tabular-nums leading-none" aria-hidden>
             {readyCountdown ?? 5}
           </span>
-          <span className="text-sm text-white/60">초 후 자동 시작!</span>
+          <span className="text-sm text-white/60">{t('game.autoStartCountdown')}</span>
         </div>
         <button className="btn-ghost text-sm" onClick={() => nav('/league')}>
-          ← 리그 선택
+          {t('game.chooseLeague')}
         </button>
       </div>
     );
@@ -700,7 +702,7 @@ export default function GamePage() {
               setMuted(next);
             }}
             className="text-white/60 hover:text-white text-lg"
-            title={muted ? '음소거 해제' : '음소거'}
+            title={muted ? t('game.unmute') : t('game.mute')}
           >
             {muted ? '🔇' : '🔊'}
           </button>
@@ -708,12 +710,12 @@ export default function GamePage() {
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
-              if (window.confirm('지금 나가면 점수가 저장되지 않아요. 정말 나갈까요?')) {
+              if (window.confirm(t('game.quitConfirm'))) {
                 nav('/league');
               }
             }}
             className="text-white/60 hover:text-red-400 text-lg leading-none"
-            title="나가기"
+            title={t('game.quit')}
           >
             ✕
           </button>
@@ -915,7 +917,7 @@ export default function GamePage() {
               <span className="text-2xl shrink-0">{lastItem.item.icon}</span>
               <span className="font-bold text-base shrink-0">{lastItem.item.name}</span>
               <span className="text-[10px] opacity-80 px-1.5 py-0.5 rounded bg-white/15 shrink-0">
-                {lastItem.item.slot ? '슬롯' : '즉시'}
+                {lastItem.item.slot ? t('game.slot') : t('game.instant')}
               </span>
               <span className="opacity-40 shrink-0">·</span>
               <span className="text-sm opacity-90 truncate">{lastItem.item.hint}</span>
@@ -936,7 +938,7 @@ export default function GamePage() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => useItemAt(i)}
               disabled={!item}
-              title={item?.hint ?? `슬롯 ${i + 1} (비어있음)`}
+              title={item?.hint ?? t('game.emptySlot', { n: i + 1 })}
               className={`relative w-14 h-14 rounded-xl border flex items-center justify-center transition ${
                 item
                   ? 'bg-white/10 border-white/30 hover:bg-white/20 hover:scale-105 active:scale-95 cursor-pointer'
@@ -954,14 +956,14 @@ export default function GamePage() {
 
       {/* 아이템 힌트 — 입력창 위 가로 한 줄 */}
       <div className="px-4 pt-1.5 pb-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11px] leading-none opacity-75 select-none pointer-events-none">
-        <span className="font-bold text-white/45">📦슬롯</span>
+        <span className="font-bold text-white/45">{t('game.slotLegend')}</span>
         {ITEM_POOL.filter((i) => i.slot).map((i) => (
           <span key={i.effect} className="inline-flex items-center gap-0.5 text-white/80">
             <span>{i.icon}</span>{i.name}
           </span>
         ))}
         <span className="text-white/25">|</span>
-        <span className="font-bold text-white/45">⚡즉시</span>
+        <span className="font-bold text-white/45">{t('game.instantLegend')}</span>
         {ITEM_POOL.filter((i) => !i.slot).map((i) => (
           <span
             key={i.effect}
@@ -980,7 +982,7 @@ export default function GamePage() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => goWithConfirm('/insider')}
             className="topbtn topbtn-event shrink-0 max-w-[20vw] truncate"
-            title="친구초대 이벤트 랭킹"
+            title={t('game.referralEventRanking')}
           >
             🤝 {eventTitle}
           </button>
@@ -990,9 +992,9 @@ export default function GamePage() {
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => goWithConfirm(user ? '/profile' : '/login')}
           className="topbtn shrink-0 max-w-[22vw] truncate"
-          title={user ? '내 정보' : '로그인'}
+          title={user ? t('game.myInfo') : t('game.login')}
         >
-          {user ? `👤 ${user.nickname}` : '로그인'}
+          {user ? `👤 ${user.nickname}` : t('game.login')}
         </button>
         <input
           ref={inputRef}
@@ -1079,8 +1081,8 @@ export default function GamePage() {
             }
           }}
           placeholder={isSuperBeginner
-            ? '단어 입력 후 Enter 또는 스페이스로 넘기기!'
-            : '단어 입력 후 Enter · 1~5 키로 아이템 사용'}
+            ? t('game.inputPlaceholderSuper')
+            : t('game.inputPlaceholder')}
           className={`w-1/2 px-4 py-3 rounded-xl bg-white/10 border text-center outline-none transition-colors ${
             inputWarn ? 'border-red-500/80 focus:border-red-500/80' : 'border-white/20 focus:border-white/50'
           }`}
@@ -1091,13 +1093,13 @@ export default function GamePage() {
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => goWithConfirm('/')}
           className="topbtn shrink-0"
-          title="홈으로"
+          title={t('game.toHome')}
         >
-          🏠 홈
+          🏠 {t('game.home')}
         </button>
         {inputWarn && (
           <span className="absolute left-1/2 -translate-x-1/2 top-0 text-xs text-red-400 font-bold pointer-events-none">
-            ⌨ 직접 키보드 입력만 가능해요 (붙여넣기·음성입력 불가)
+            {t('game.inputWarn')}
           </span>
         )}
       </div>

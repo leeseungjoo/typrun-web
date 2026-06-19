@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/client';
@@ -20,6 +22,7 @@ interface MatchInfo {
 // P1 Phase 1: 매칭 흐름만(서버 큐/룸 기존 구현). 실제 대결 화면(BattleGamePage)은 다음 Phase.
 export default function BattleLobbyPage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const { categorySeq: categoryParam, mode: modeParam } = useParams();
   const categorySeq = Number(categoryParam);
@@ -73,13 +76,13 @@ export default function BattleLobbyPage() {
           setWaiting({ have: msg.have, need: msg.need });
           break;
         case 'queue:slow':
-          setNotice('매칭 대기가 길어지고 있어요. 잠시만 기다려 주세요.');
+          setNotice(t('battle.queueSlow'));
           break;
         case 'queue:lonely':
           setNotice(
             msg.suggest === '2p'
-              ? '3인 상대가 부족해요. 2인전이 더 빨라요.'
-              : '대기 인원이 적어요. 잠시 후 다시 시도해 주세요.',
+              ? t('battle.lonelySuggest2p')
+              : t('battle.lonelyFewPlayers'),
           );
           break;
         case 'match:found':
@@ -105,12 +108,12 @@ export default function BattleLobbyPage() {
           setMatch(null);
           setStarted(false);
           setCountdownSec(null);
-          setNotice('상대가 나가 매칭이 취소됐어요. 다시 상대를 찾는 중…');
+          setNotice(t('battle.matchCancelledRequeue'));
           if (mode) sock.send({ t: 'queue:join', categorySeq, mode, nickname: myNickname });
           break;
         case 'error':
           if (matchedRef.current) break; // 게임 진입 후엔 로비 에러 배너로 오염시키지 않음.
-          setErr(msg.message || '오류가 발생했어요.');
+          setErr(msg.message || t('battle.genericError'));
           break;
         default:
           break;
@@ -154,7 +157,7 @@ export default function BattleLobbyPage() {
   if (loading) {
     return (
       <Centered>
-        <p role="status">불러오는 중...</p>
+        <p role="status">{t('battle.loading')}</p>
       </Centered>
     );
   }
@@ -162,10 +165,10 @@ export default function BattleLobbyPage() {
     return (
       <Centered>
         <p className="mb-4 text-white/70" role="status">
-          배틀은 로그인 후 이용할 수 있어요.
+          {t('battle.loginRequired')}
         </p>
         <button className="btn-primary" onClick={() => nav('/login')}>
-          로그인하기
+          {t('battle.goLogin')}
         </button>
       </Centered>
     );
@@ -174,10 +177,10 @@ export default function BattleLobbyPage() {
     return (
       <Centered>
         <p className="mb-4 text-white/70" role="status">
-          잘못된 접근이에요.
+          {t('battle.invalidAccess')}
         </p>
         <button className="btn-ghost" onClick={() => nav('/league')}>
-          리그 목록으로
+          {t('battle.toLeagueList')}
         </button>
       </Centered>
     );
@@ -186,11 +189,11 @@ export default function BattleLobbyPage() {
   const need = needForMode(mode);
   const statusText = !match
     ? conn !== 'open'
-      ? '실시간 서버에 연결 중'
-      : `상대 찾는 중, ${Math.min(waiting?.have ?? 1, need)} / ${need}명`
+      ? t('battle.connecting')
+      : t('battle.findingStatus', { have: Math.min(waiting?.have ?? 1, need), need })
     : started
-    ? '대결 시작'
-    : '상대를 찾았어요, 곧 시작합니다';
+    ? t('battle.matchStarted')
+    : t('battle.opponentFoundStarting');
 
   return (
     <div className="min-h-screen px-6 pt-16 pb-8 max-w-lg mx-auto">
@@ -201,9 +204,9 @@ export default function BattleLobbyPage() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <span aria-hidden>⚔️</span> 배틀
+          <span aria-hidden>⚔️</span> {t('battle.battle')}
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
-            베타
+            {t('battle.beta')}
           </span>
         </h1>
         {catName && (
@@ -231,9 +234,9 @@ export default function BattleLobbyPage() {
           onExit={() => nav(`/league/${categorySeq}`)}
         />
       ) : !match ? (
-        <QueuePanel conn={conn} have={waiting?.have ?? 1} need={need} />
+        <QueuePanel conn={conn} have={waiting?.have ?? 1} need={need} t={t} />
       ) : (
-        <MatchPanel match={match} started={started} countdownSec={countdownSec} />
+        <MatchPanel match={match} started={started} countdownSec={countdownSec} t={t} />
       )}
 
       {notice && !match && <p className="text-xs text-amber-200/80 text-center mt-3">{notice}</p>}
@@ -244,7 +247,7 @@ export default function BattleLobbyPage() {
           onClick={() => nav(`/league/${categorySeq}`)}
           className="mt-8 w-full py-4 rounded-2xl bg-white/8 hover:bg-white/15 border border-white/15 text-base font-bold text-white/80 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
-          ← 대기 취소하고 나가기
+          ← {t('battle.cancelAndLeave')}
         </button>
       )}
     </div>
@@ -257,7 +260,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function QueuePanel({ conn, have, need }: { conn: SocketState; have: number; need: number }) {
+function QueuePanel({ conn, have, need, t }: { conn: SocketState; have: number; need: number; t: TFunction }) {
   const connecting = conn !== 'open';
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card text-center py-10">
@@ -266,16 +269,16 @@ function QueuePanel({ conn, have, need }: { conn: SocketState; have: number; nee
       </div>
       {connecting ? (
         <>
-          <p className="font-bold mb-1">실시간 서버에 연결 중…</p>
+          <p className="font-bold mb-1">{t('battle.connectingDots')}</p>
           <p className="text-sm text-white/50">
-            {conn === 'closed' ? '연결이 끊겨 재연결하고 있어요.' : '잠시만 기다려 주세요.'}
+            {conn === 'closed' ? t('battle.reconnecting') : t('battle.pleaseWait')}
           </p>
         </>
       ) : (
         <>
-          <p className="font-bold mb-1">상대를 찾는 중…</p>
+          <p className="font-bold mb-1">{t('battle.findingOpponent')}</p>
           <p className="text-sm text-white/55">
-            <b className="text-white/85 tabular-nums">{Math.min(have, need)}</b> / {need} 명
+            <b className="text-white/85 tabular-nums">{Math.min(have, need)}</b> / {need} {t('battle.peopleUnit')}
           </p>
         </>
       )}
@@ -287,39 +290,41 @@ function MatchPanel({
   match,
   started,
   countdownSec,
+  t,
 }: {
   match: MatchInfo;
   started: boolean;
   countdownSec: number | null;
+  t: TFunction;
 }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="card text-center">
-      <p className="text-sm text-white/50 mb-4">상대를 찾았어요!</p>
+      <p className="text-sm text-white/50 mb-4">{t('battle.opponentFound')}</p>
 
       <div className="flex items-stretch justify-center gap-3 mb-6">
         {match.players.map((p, i) => (
-          <PlayerCard key={p.userSeq} player={p} isYou={p.userSeq === match.you} index={i} />
+          <PlayerCard key={p.userSeq} player={p} isYou={p.userSeq === match.you} index={i} t={t} />
         ))}
       </div>
 
       {started ? (
         <div>
-          <p className="text-2xl font-bold text-emerald-300 mb-1">대결 시작!</p>
-          <p className="text-xs text-white/55">실시간 대결 화면은 곧 제공됩니다(개발 중).</p>
+          <p className="text-2xl font-bold text-emerald-300 mb-1">{t('battle.matchStartBang')}</p>
+          <p className="text-xs text-white/55">{t('battle.liveScreenComingSoon')}</p>
         </div>
       ) : (
         <div>
           <p className="text-5xl font-impact text-violet-200 tabular-nums leading-none mb-1" aria-hidden>
             {countdownSec ?? ''}
           </p>
-          <p className="text-xs text-white/55">곧 시작합니다</p>
+          <p className="text-xs text-white/55">{t('battle.startingSoon')}</p>
         </div>
       )}
     </motion.div>
   );
 }
 
-function PlayerCard({ player, isYou, index }: { player: PlayerInfo; isYou: boolean; index: number }) {
+function PlayerCard({ player, isYou, index, t }: { player: PlayerInfo; isYou: boolean; index: number; t: TFunction }) {
   const initial = (player.nickname || '?').trim().charAt(0).toUpperCase();
   return (
     <div
@@ -339,7 +344,7 @@ function PlayerCard({ player, isYou, index }: { player: PlayerInfo; isYou: boole
       <p className="text-sm font-semibold truncate" title={player.nickname}>
         {player.nickname}
       </p>
-      <p className="text-[11px] text-white/60">{isYou ? '나' : `P${index + 1}`}</p>
+      <p className="text-[11px] text-white/60">{isYou ? t('battle.you') : `P${index + 1}`}</p>
     </div>
   );
 }

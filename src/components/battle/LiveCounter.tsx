@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { battleApi } from '../../api/battle';
 import type { BattleStatus } from '../../api/types';
 
@@ -13,6 +14,7 @@ interface LiveCounterProps {
 // - 5s 단일 타이머 체인. 탭 비활성 시 네트워크 스킵, 복귀 시 즉시 1회 갱신.
 // - 에러는 직전값 유지(throw 안 함) — 카운터가 페이지를 깨면 안 됨.
 export default function LiveCounter({ categorySeq, className = '' }: LiveCounterProps) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<BattleStatus | null>(null);
 
   useEffect(() => {
@@ -65,15 +67,15 @@ export default function LiveCounter({ categorySeq, className = '' }: LiveCounter
           className={`relative inline-flex h-2 w-2 rounded-full ${live ? 'bg-emerald-400' : 'bg-white/30'}`}
         />
       </span>
-      {!live && <span className="sr-only">접속 정보 연결 지연 — 최근값 표시 중. </span>}
+      {!live && <span className="sr-only">{t('battle.liveDelayed')}</span>}
       <span>
-        게임중 <b className="text-white/85 font-semibold tabular-nums">{playing}</b>
+        {t('battle.inGame')} <b className="text-white/85 font-semibold tabular-nums">{playing}</b>
       </span>
       <span className="text-white/25" aria-hidden>
         ·
       </span>
       <span>
-        대기중 <b className="text-white/85 font-semibold tabular-nums">{waiting}</b>
+        {t('battle.waiting')} <b className="text-white/85 font-semibold tabular-nums">{waiting}</b>
       </span>
     </div>
   );

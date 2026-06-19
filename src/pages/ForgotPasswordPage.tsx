@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '../api/auth';
 
 export default function ForgotPasswordPage() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -35,27 +37,27 @@ export default function ForgotPasswordPage() {
         <h1 className="text-3xl font-black tracking-tight text-center mb-1">
           Typ<span className="text-primary">Run</span>
         </h1>
-        <p className="text-center text-white/40 text-sm mb-8">비밀번호 재설정</p>
+        <p className="text-center text-white/40 text-sm mb-8">{t('auth.resetPassword')}</p>
 
         {sent ? (
           <div className="text-center">
             <div className="text-5xl mb-4">📧</div>
-            <h2 className="text-lg font-bold mb-2">재설정 메일을 보냈어요</h2>
+            <h2 className="text-lg font-bold mb-2">{t('auth.resetMailSentTitle')}</h2>
             <p className="text-sm text-white/60 leading-relaxed mb-6">
-              <b className="text-white/80">{email}</b> 로 보낸<br />
-              링크를 눌러 새 비밀번호를 설정하세요. (1시간 유효)
+              <b className="text-white/80">{email}</b>{t('auth.verifyMailSentTo')}<br />
+              {t('auth.resetMailSentBody')}
             </p>
             <button className="btn-primary w-full" onClick={() => nav('/login')}>
-              로그인으로
+              {t('auth.toLoginPlain')}
             </button>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-3">
             <p className="text-xs text-white/50 text-center mb-2 leading-relaxed">
-              가입한 이메일을 입력하면<br />재설정 링크를 보내드려요.
+              {t('auth.forgotIntro1')}<br />{t('auth.forgotIntro2')}
             </p>
             <label className="block">
-              <span className="text-xs text-white/50 tracking-wider">이메일</span>
+              <span className="text-xs text-white/50 tracking-wider">{t('auth.email')}</span>
               <input
                 type="email"
                 autoComplete="email"
@@ -68,10 +70,10 @@ export default function ForgotPasswordPage() {
             </label>
             {err && <p className="text-sm text-red-400 text-center">{err}</p>}
             <button type="submit" disabled={busy} className="btn-primary mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
-              {busy ? '보내는 중...' : '재설정 메일 받기'}
+              {busy ? t('auth.sending') : t('auth.sendResetMail')}
             </button>
             <button type="button" className="text-xs text-white/40 hover:text-white/70 mt-1" onClick={() => nav('/login')}>
-              ← 로그인으로
+              {t('auth.backToLogin')}
             </button>
           </form>
         )}

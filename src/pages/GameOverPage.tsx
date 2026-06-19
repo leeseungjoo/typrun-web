@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +43,7 @@ function readPendingResult(): GameResult | null {
 }
 
 export default function GameOverPage() {
+  const { t } = useTranslation();
   const nav = useNavigate();
   const loc = useLocation();
   const { user, loading: authLoading } = useAuth();
@@ -93,10 +95,10 @@ export default function GameOverPage() {
   if (!result) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
-        <h2 className="text-2xl font-bold">결과 데이터가 없어요</h2>
-        <p className="text-white/50 text-sm">게임 종료 후 자동 이동되는 페이지예요.</p>
+        <h2 className="text-2xl font-bold">{t('gameover.noResultTitle')}</h2>
+        <p className="text-white/50 text-sm">{t('gameover.noResultDesc')}</p>
         <button className="btn-primary" onClick={() => nav('/league')}>
-          리그 선택으로
+          {t('gameover.toChooseLeague')}
         </button>
       </div>
     );
@@ -136,7 +138,7 @@ export default function GameOverPage() {
         {/* 연습 리그: 랭킹/저장 없이 격려 메시지만 */}
         {isPractice && (
           <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm text-center">
-            🌱 연습 리그 결과예요 · 랭킹에는 집계되지 않아요
+            🌱 {t('gameover.practiceNotice')}
           </div>
         )}
 
@@ -144,14 +146,14 @@ export default function GameOverPage() {
         {!isPractice && !authLoading && !user && (
           <div className="card text-center max-w-md">
             <div className="text-sm text-white/80 mb-3">
-              아직 로그인을 하지 않았습니다.<br />
-              로그인을 하고 랭크에 등록해주세요 🏆
+              {t('gameover.loginPromptLine1')}<br />
+              {t('gameover.loginPromptLine2')} 🏆
             </div>
             <button className="btn-primary w-full" onClick={goLogin}>
-              로그인하고 랭크에 등록
+              {t('gameover.loginAndRegister')}
             </button>
             <div className="text-[10px] text-white/40 mt-2">
-              로그인 후 자동으로 점수가 저장돼요
+              {t('gameover.autoSaveHint')}
             </div>
           </div>
         )}
@@ -159,8 +161,8 @@ export default function GameOverPage() {
         {/* 랭킹 리그 · 로그인 사용자: 저장 상태 표시 */}
         {!isPractice && user && (
           <div className="flex items-center gap-3">
-            {saving && <span className="text-white/50 text-sm">점수 저장 중...</span>}
-            {saveErr && <span className="text-red-400 text-sm">저장 실패: {saveErr}</span>}
+            {saving && <span className="text-white/50 text-sm">{t('gameover.saving')}</span>}
+            {saveErr && <span className="text-red-400 text-sm">{t('gameover.saveFailed', { err: saveErr })}</span>}
             {saveRes && (
               <>
                 {isNewBest && (
@@ -174,7 +176,7 @@ export default function GameOverPage() {
                   </motion.span>
                 )}
                 <span className="text-white/70">
-                  시즌 순위 <span className="font-bold text-white">#{saveRes.rank_no}</span>
+                  {t('gameover.seasonRank')} <span className="font-bold text-white">#{saveRes.rank_no}</span>
                 </span>
               </>
             )}
@@ -189,10 +191,10 @@ export default function GameOverPage() {
         transition={{ delay: 0.5 }}
         className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-10"
       >
-        <Stat label="정확도" value={`${accuracyPct}%`} />
+        <Stat label={t('gameover.accuracy')} value={`${accuracyPct}%`} />
         <Stat label="WPM" value={result.wpm} />
-        <Stat label="최대 콤보" value={result.max_combo} />
-        <Stat label="정답 / 놓침" value={`${result.correct_count} / ${result.miss_count}`} />
+        <Stat label={t('gameover.maxCombo')} value={result.max_combo} />
+        <Stat label={t('gameover.correctMissed')} value={`${result.correct_count} / ${result.miss_count}`} />
       </motion.div>
 
       {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
@@ -211,21 +213,21 @@ export default function GameOverPage() {
           className="btn-primary"
           onClick={() => nav(`/game/${result.category_seq}`, { replace: true })}
         >
-          🔁 다시 도전
+          🔁 {t('gameover.tryAgain')}
         </button>
         {!isPractice && (
           <button
             className="btn-ghost"
             onClick={() => nav(`/rankings/${result.category_seq}`)}
           >
-            🏆 랭킹 보기
+            🏆 {t('gameover.viewRankings')}
           </button>
         )}
         <button className="btn-ghost" onClick={() => nav('/league')}>
-          리그 선택
+          {t('gameover.chooseLeague')}
         </button>
         <button className="btn-ghost" onClick={() => nav('/')}>
-          홈
+          {t('gameover.home')}
         </button>
       </motion.div>
     </div>

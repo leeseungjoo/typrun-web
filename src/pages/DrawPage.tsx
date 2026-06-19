@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import Matter from 'matter-js';
 import { api } from '../api/client';
@@ -114,6 +115,7 @@ function weightedSample<T>(items: T[], weights: number[], k: number): T[] {
 }
 
 export default function DrawPage() {
+  const { t } = useTranslation();
   const { token } = useParams();
   const [searchParams] = useSearchParams();
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -140,7 +142,7 @@ export default function DrawPage() {
 
   // 데이터 로드
   useEffect(() => {
-    if (!token) { setLoadErr('잘못된 링크입니다.'); return; }
+    if (!token) { setLoadErr(t('draw.invalidLink')); return; }
 
     if (token === 'demo') {
       const n = Math.max(1, Number(searchParams.get('n')) || 250);
@@ -158,7 +160,7 @@ export default function DrawPage() {
       .then((d) => { if (!alive) return; setCfg(d.draw); setCandidates(d.candidates); })
       .catch((e) => { if (alive) setLoadErr(String(e instanceof Error ? e.message : e)); });
     return () => { alive = false; };
-  }, [token, searchParams]);
+  }, [token, searchParams, t]);
 
   // 추첨 빌드 + 시작 (카운트다운 후 낙하)
   const start = useCallback(() => {
@@ -412,26 +414,26 @@ export default function DrawPage() {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(
         () => showToast(note),
-        () => window.prompt('복사:', text), // 클립보드 권한 거부 시 최후 폴백
+        () => window.prompt(t('draw.copyPrompt'), text), // 클립보드 권한 거부 시 최후 폴백
       );
     } else {
-      window.prompt('복사:', text);
+      window.prompt(t('draw.copyPrompt'), text);
     }
   };
   const copyResults = async () => {
     if (!winners.length || !token) return;
     if (token === 'demo') {
       const text = winners.map((w) => w.masked_email).join(', ');
-      doCopy(text, `[데모] 당첨자 ${winners.length}명 복사 완료`);
+      doCopy(text, t('draw.copiedWinnersDemo', { n: winners.length }));
       return;
     }
     try {
       const res = await api.drawWinners(token, winners.map((w) => w.user_seq));
       const emails = res.winners.map((w) => w.email).filter(Boolean);
-      if (!emails.length) { showToast('이메일을 가져오지 못했습니다.'); return; }
-      doCopy(emails.join(', '), `당첨자 ${emails.length}명 복사 완료`);
+      if (!emails.length) { showToast(t('draw.emailFetchFailed')); return; }
+      doCopy(emails.join(', '), t('draw.copiedWinners', { n: emails.length }));
     } catch (e) {
-      showToast('이메일 조회 실패: ' + (e instanceof Error ? e.message : String(e)));
+      showToast(t('draw.emailLookupError', { msg: e instanceof Error ? e.message : String(e) }));
     }
   };
 
@@ -447,7 +449,7 @@ export default function DrawPage() {
     );
   }
   if (!cfg || !candidates) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0b0a1a] text-white">불러오는 중...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#0b0a1a] text-white">{t('draw.loading')}</div>;
   }
 
   const usedPrelim = candidates.length > cfg.finalist_cap;
@@ -473,17 +475,17 @@ export default function DrawPage() {
       {/* 헤더 */}
       <div className="text-center mb-3">
         <div className="text-xl md:text-2xl font-extrabold tracking-tight">
-          🎰 {cfg.title || `${cfg.category_name} 추첨`}
+          🎰 {cfg.title || t('draw.titleFallback', { category: cfg.category_name })}
         </div>
         <div className="text-xs text-white/50 mt-1">
-          {cfg.category_name} · {cfg.start_date} ~ {cfg.end_date} · {cfg.min_score.toLocaleString()}점↑ 자격
+          {cfg.category_name} · {cfg.start_date} ~ {cfg.end_date} · {t('draw.minScoreEligible', { score: cfg.min_score.toLocaleString() })}
         </div>
         <div className="text-xs text-white/70 mt-1">
-          후보 <b>{candidates.length.toLocaleString()}</b>명
+          {t('draw.candidates')} <b>{candidates.length.toLocaleString()}</b>{t('draw.peopleUnit')}
           {usedPrelim && phase !== 'idle' && (
-            <> → 예선 통과 <b className="text-amber-300">{finalistCount.toLocaleString()}</b>명 본선</>
+            <> {t('draw.prelimPassedPrefix')} <b className="text-amber-300">{finalistCount.toLocaleString()}</b>{t('draw.prelimPassedSuffix')}</>
           )}
-          {' · '}{cfg.winner_count}명 추첨 · {cfg.weight_mode === 'weighted' ? '가중' : '균등'}
+          {' · '}{t('draw.drawCount', { n: cfg.winner_count })} · {cfg.weight_mode === 'weighted' ? t('draw.weighted') : t('draw.equal')}
         </div>
       </div>
 
@@ -499,9 +501,9 @@ export default function DrawPage() {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <div className="text-5xl">🎰</div>
             <button onClick={start} className="px-8 py-4 rounded-2xl text-lg font-extrabold bg-violet-500 hover:bg-violet-400 shadow-xl transition">
-              ▶ 추첨 시작
+              ▶ {t('draw.start')}
             </button>
-            <div className="text-xs text-white/40">카메라 준비되면 누르세요</div>
+            <div className="text-xs text-white/40">{t('draw.startHint')}</div>
           </div>
         )}
 
@@ -536,7 +538,7 @@ export default function DrawPage() {
                 transition={{ type: 'spring', stiffness: 340, damping: 18 }}
                 className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-black/70 backdrop-blur px-2.5 py-1 text-xs font-bold"
               >
-                <span>{MEDAL[w.rank - 1] ?? `${w.rank}위`}</span>
+                <span>{MEDAL[w.rank - 1] ?? t('draw.rankPlace', { n: w.rank })}</span>
                 <span className="truncate max-w-[88px]">{w.nickname}</span>
                 <span className="text-white/40 font-normal">#{w.user_seq}</span>
               </motion.span>
@@ -552,22 +554,21 @@ export default function DrawPage() {
           disabled={phase === 'countdown' || phase === 'running'}
           className="px-5 py-2.5 rounded-xl font-bold bg-violet-500/30 border border-violet-400/50 hover:bg-violet-500/50 disabled:opacity-40 transition"
         >
-          {phase === 'idle' ? '▶ 추첨 시작' : '🔄 다시 추첨'}
+          {phase === 'idle' ? `▶ ${t('draw.start')}` : `🔄 ${t('draw.again')}`}
         </button>
         {winners.length > 0 && (
           <button
             onClick={copyResults}
             className="px-4 py-2.5 rounded-xl font-bold bg-white/10 border border-white/20 hover:bg-white/20 transition text-sm"
           >
-            📧 당첨자 이메일 복사
+            📧 {t('draw.copyWinnerEmails')}
           </button>
         )}
-        {done && <span className="text-emerald-300 text-sm font-bold">추첨 완료!</span>}
+        {done && <span className="text-emerald-300 text-sm font-bold">{t('draw.complete')}</span>}
       </div>
 
       <p className="text-[11px] text-white/30 mt-3 text-center max-w-md">
-        물리엔진이 실제로 결정하는 정직한 추첨입니다. 결과는 저장되지 않으며 다시 추첨하면 매번 새로 뽑힙니다.
-        추첨 완료 후 '당첨자 이메일 복사'로 당첨자 이메일만 받을 수 있어요 (전체 참가자 명단은 노출되지 않습니다).
+        {t('draw.disclaimer')}
       </p>
     </div>
   );

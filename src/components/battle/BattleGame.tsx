@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../../api/client';
 import { clearScore } from '../../lib/score';
@@ -56,9 +57,10 @@ export default function BattleGame({
   onExit,
 }: BattleGameProps) {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const [pool, setPool] = useState<Word[] | null>(null);
-  const oppNickname = players.find((p) => p.userSeq !== you)?.nickname ?? '상대';
-  const myNickname = players.find((p) => p.userSeq === you)?.nickname ?? '나';
+  const oppNickname = players.find((p) => p.userSeq !== you)?.nickname ?? t('battle.opponent');
+  const myNickname = players.find((p) => p.userSeq === you)?.nickname ?? t('battle.you');
   const [opp, setOpp] = useState<OppState>({ nickname: oppNickname, score: 0, combo: 0, hp: INITIAL_HP, typingWord: null });
   const [result, setResult] = useState<Result | null>(null);
   const [awaiting, setAwaiting] = useState(false);
@@ -269,8 +271,8 @@ export default function BattleGame({
   if (!pool) {
     return (
       <div className="card text-center py-10" role="status" aria-live="polite">
-        <p className="font-bold mb-1">단어 준비 중…</p>
-        <p className="text-sm text-white/55">곧 시작합니다</p>
+        <p className="font-bold mb-1">{t('battle.preparingWords')}</p>
+        <p className="text-sm text-white/55">{t('battle.startingSoon')}</p>
       </div>
     );
   }
@@ -290,7 +292,7 @@ export default function BattleGame({
         aria-atomic="true"
       >
         <p className="sr-only">
-          {title}. 내 점수 {result.mine.toLocaleString()}, 상대 {result.top.toLocaleString()}.
+          {title}. {t('battle.srMyScore', { score: result.mine.toLocaleString() })} {t('battle.srOppScore', { score: result.top.toLocaleString() })}
         </p>
         <motion.p
           initial={{ opacity: 0, y: -8 }}
@@ -322,20 +324,20 @@ export default function BattleGame({
 
         {result.voided && (
           <p aria-hidden className="text-[12px] text-amber-300/90 mb-3">
-            ⚠ 둘 다 {WIN_THRESHOLD}점 미만 — 무효판(무승부)
+            ⚠ {t('battle.voidedNotice', { n: WIN_THRESHOLD })}
           </p>
         )}
 
         {/* 스탯 (랭킹 게임종료화면과 동일 구성) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-3" aria-hidden>
-          <BStat label={`${opp.nickname} 점수`} value={result.top.toLocaleString()} />
-          <BStat label="정확도" value={`${accuracyPct}%`} />
-          <BStat label="최대 콤보" value={myStats?.maxCombo ?? 0} />
-          <BStat label="정답 / 놓침" value={`${myStats?.correct ?? 0} / ${myStats?.miss ?? 0}`} />
+          <BStat label={t('battle.playerScore', { name: opp.nickname })} value={result.top.toLocaleString()} />
+          <BStat label={t('battle.accuracy')} value={`${accuracyPct}%`} />
+          <BStat label={t('battle.maxCombo')} value={myStats?.maxCombo ?? 0} />
+          <BStat label={t('battle.correctMiss')} value={`${myStats?.correct ?? 0} / ${myStats?.miss ?? 0}`} />
         </div>
 
         <p aria-hidden className="text-[11px] text-white/45 mb-7">
-          {result.official ? '공식 결과 · 전적에 반영됐어요(베타)' : '임시 결과(서버 응답 지연)'}
+          {result.official ? t('battle.officialResult') : t('battle.tempResult')}
         </p>
 
         {/* 통일 하단 버튼 — 다시도전 / 랭킹보기 / 리그선택 / 홈 */}
@@ -345,19 +347,19 @@ export default function BattleGame({
             disabled={!canExit}
             onClick={() => nav(`/battle/${categorySeq}/2p`, { replace: true })}
           >
-            🔁 다시 도전
+            🔁 {t('battle.tryAgain')}
           </button>
           <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav(`/rankings/${categorySeq}`)}>
-            🏆 랭킹 보기
+            🏆 {t('battle.viewRankings')}
           </button>
           <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/league')}>
-            리그 선택
+            {t('battle.selectLeague')}
           </button>
           <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/')}>
-            홈
+            {t('battle.home')}
           </button>
         </div>
-        {!canExit && <p className="text-[11px] text-white/35 mt-3">결과 확인 중…</p>}
+        {!canExit && <p className="text-[11px] text-white/35 mt-3">{t('battle.checkingResult')}</p>}
       </div>
     );
   }
@@ -368,8 +370,8 @@ export default function BattleGame({
         <div className="flex justify-center mb-4" aria-hidden>
           <span className="inline-block h-9 w-9 rounded-full border-4 border-white/15 border-t-violet-400 animate-spin" />
         </div>
-        <p className="font-bold mb-1">결과 집계 중…</p>
-        <p className="text-sm text-white/55">상대 종료를 기다리고 있어요.</p>
+        <p className="font-bold mb-1">{t('battle.tallyingResult')}</p>
+        <p className="text-sm text-white/55">{t('battle.waitingOpponentFinish')}</p>
       </div>
     );
   }
@@ -377,13 +379,13 @@ export default function BattleGame({
   const blurOn = eng.effects.some((e) => e.effect === 'blur');
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#0F1226] overflow-hidden" role="group" aria-label="실시간 배틀 진행 중">
+    <div className="fixed inset-0 z-40 bg-[#0F1226] overflow-hidden" role="group" aria-label={t('battle.gameInProgress')}>
       {/* 상단 HUD — 좌: 나 / 중앙: 시간 / 우: 상대(컴팩트) + 나가기 */}
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 bg-black/45 backdrop-blur-sm">
         {/* 나 */}
         <div className="flex items-center gap-2 min-w-0">
-          <Hearts hp={eng.hp} max={MAX_HP} label={`내 생명 ${eng.hp} / ${MAX_HP}`} small />
-          <span className="font-impact text-2xl leading-none" aria-label={`내 점수 ${eng.score}`}>
+          <Hearts hp={eng.hp} max={MAX_HP} label={t('battle.myLives', { hp: eng.hp, max: MAX_HP })} small />
+          <span className="font-impact text-2xl leading-none" aria-label={t('battle.myScore', { score: eng.score })}>
             {eng.score.toLocaleString()}
           </span>
           <span className="text-xs text-orange-300/90">🔥{eng.combo}</span>
@@ -391,10 +393,10 @@ export default function BattleGame({
 
         {/* 중앙 시간 */}
         <div className="text-center leading-tight shrink-0">
-          <span className="block text-sm text-white/80" aria-label={`남은 시간 ${eng.timeLeft}초`}>
+          <span className="block text-sm text-white/80" aria-label={t('battle.timeLeft', { sec: eng.timeLeft })}>
             <span aria-hidden>⏱</span> {eng.timeLeft}s
           </span>
-          <span className="block text-[10px] text-amber-300/90">{WIN_THRESHOLD}점↑ 승부 · 미만 무효</span>
+          <span className="block text-[10px] text-amber-300/90">{t('battle.thresholdRule', { n: WIN_THRESHOLD })}</span>
         </div>
 
         {/* 상대(컴팩트) + 나가기 */}
@@ -402,7 +404,7 @@ export default function BattleGame({
           <div className="text-right leading-none min-w-0">
             <span className="block text-[11px] text-white/55 truncate max-w-[26vw]">{opp.nickname}</span>
             <div className="flex items-center justify-end gap-1.5 mt-0.5">
-              <Hearts hp={opp.hp} max={MAX_HP} label={`상대 생명 ${opp.hp} / ${MAX_HP}`} small />
+              <Hearts hp={opp.hp} max={MAX_HP} label={t('battle.oppLives', { hp: opp.hp, max: MAX_HP })} small />
               <span className="font-impact text-xl leading-none tabular-nums">{opp.score.toLocaleString()}</span>
               <span className="text-[11px] text-orange-300/90">🔥{opp.combo}</span>
             </div>
@@ -410,7 +412,7 @@ export default function BattleGame({
           <button
             onClick={onExit}
             className="text-white/60 hover:text-red-400 text-lg leading-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 shrink-0"
-            aria-label="배틀 나가기"
+            aria-label={t('battle.leaveBattle')}
           >
             <span aria-hidden>✕</span>
           </button>
@@ -469,7 +471,7 @@ export default function BattleGame({
                 p.mine ? 'bg-yellow-400/20 text-yellow-200' : 'bg-sky-400/20 text-sky-200'
               }`}
             >
-              {p.mine ? '나' : p.by}
+              {p.mine ? t('battle.you') : p.by}
             </span>
             <span
               className={`font-impact text-3xl drop-shadow-[0_0_8px_rgba(255,200,0,0.7)] ${
@@ -508,14 +510,14 @@ export default function BattleGame({
 
         {/* 아이템 가이드 — 슬롯/즉시 아이템 한 줄 안내(수정요청4) */}
         <div className="px-3 pt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[10px] leading-none opacity-80 select-none pointer-events-none">
-          <span className="font-bold text-white/45">📦슬롯</span>
+          <span className="font-bold text-white/45">📦{t('battle.slotLabel')}</span>
           {ITEM_POOL.filter((i) => i.slot).map((i) => (
             <span key={i.effect} className="inline-flex items-center gap-0.5 text-white/80">
               <span>{i.icon}</span>{i.name}
             </span>
           ))}
           <span className="text-white/25">|</span>
-          <span className="font-bold text-white/45">⚡즉시</span>
+          <span className="font-bold text-white/45">⚡{t('battle.instantLabel')}</span>
           {ITEM_POOL.filter((i) => !i.slot).map((i) => (
             <span key={i.effect} className={`inline-flex items-center gap-0.5 ${i.positive ? 'text-emerald-300/80' : 'text-red-300/80'}`}>
               <span>{i.icon}</span>{i.name}
@@ -532,7 +534,7 @@ export default function BattleGame({
               onMouseDown={(ev) => ev.preventDefault()}
               onClick={() => eng.useItemAt(i)}
               disabled={!item}
-              title={item?.hint ?? `슬롯 ${i + 1} (비어있음)`}
+              title={item?.hint ?? t('battle.emptySlot', { n: i + 1 })}
               className={`relative w-11 h-11 rounded-xl border flex items-center justify-center transition ${
                 item ? 'bg-white/10 border-white/30 hover:bg-white/20 active:scale-95' : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
               }`}
@@ -546,11 +548,11 @@ export default function BattleGame({
         {/* 하트 + 유저명 — 입력창 바로 위(좌 나 / 우 상대), 수정요청4 */}
         <div className="px-3 pt-1 flex items-stretch gap-2 text-xs">
           <div className="w-1/2 flex items-center justify-center gap-2 min-w-0">
-            <Hearts hp={eng.hp} max={MAX_HP} label={`내 생명 ${eng.hp} / ${MAX_HP}`} small />
+            <Hearts hp={eng.hp} max={MAX_HP} label={t('battle.myLives', { hp: eng.hp, max: MAX_HP })} small />
             <span className="text-white/75 font-semibold truncate">{myNickname}</span>
           </div>
           <div className="w-1/2 flex items-center justify-center gap-2 min-w-0">
-            <Hearts hp={opp.hp} max={MAX_HP} label={`상대 생명 ${opp.hp} / ${MAX_HP}`} small />
+            <Hearts hp={opp.hp} max={MAX_HP} label={t('battle.oppLives', { hp: opp.hp, max: MAX_HP })} small />
             <span className="text-white/55 truncate">{opp.nickname}</span>
           </div>
         </div>
@@ -585,8 +587,8 @@ export default function BattleGame({
               onCompositionEnd={eng.bind.onCompositionEnd}
               onPaste={eng.bind.onPaste}
               onDrop={eng.bind.onDrop}
-              placeholder="단어 입력 후 Enter · 1~5 아이템"
-              aria-label="단어 입력"
+              placeholder={t('battle.inputPlaceholder')}
+              aria-label={t('battle.wordInput')}
               className={`w-full px-3 py-2.5 rounded-xl bg-white/10 border text-center outline-none transition-colors ${
                 eng.inputWarn ? 'border-red-500/80' : 'border-white/20 focus:border-white/50'
               }`}
@@ -594,7 +596,7 @@ export default function BattleGame({
             />
             {eng.inputWarn && (
               <span className="absolute left-1/2 -translate-x-1/2 -top-5 text-[11px] text-red-400 font-bold pointer-events-none" role="status" aria-live="assertive">
-                ⌨ 직접 키보드 입력만 가능해요
+                ⌨ {t('battle.keyboardOnly')}
               </span>
             )}
           </div>
@@ -616,7 +618,7 @@ export default function BattleGame({
               )}
             </AnimatePresence>
             <span className={`text-lg ${opp.typingWord ? 'font-bold' : 'text-white/30 text-sm'}`}>
-              {opp.typingWord ? `${opp.typingWord}…` : `${opp.nickname}의 입력`}
+              {opp.typingWord ? `${opp.typingWord}…` : t('battle.opponentInput', { name: opp.nickname })}
             </span>
           </div>
         </div>

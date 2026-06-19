@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { pickProfileImage } from '../api/auth';
@@ -9,23 +11,24 @@ import type { ReferralEvent, ReferralRankEntry } from '../api/types';
 // 화면에 노출할 추천왕 인원 — 상위 20명까지
 const VISIBLE_LIMIT = 20;
 
-function relativeTime(input: string): string {
+function relativeTime(input: string, t: TFunction): string {
   if (!input) return '';
   const ts = Date.parse(input);
   if (Number.isNaN(ts)) return input;
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return '방금 전';
+  if (sec < 60) return t('rankings.justNow');
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}분 전`;
+  if (min < 60) return t('rankings.minutesAgo', { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
+  if (hr < 24) return t('rankings.hoursAgo', { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  return new Date(ts).toLocaleDateString('ko-KR');
+  if (day < 7) return t('rankings.daysAgo', { n: day });
+  return new Date(ts).toLocaleDateString();
 }
 
 export default function ReferralRankPage() {
+  const { t } = useTranslation();
   const nav = useNavigate();
   const [event, setEvent] = useState<ReferralEvent | null>(null);
   const [rows, setRows] = useState<ReferralRankEntry[]>([]);
@@ -47,19 +50,19 @@ export default function ReferralRankPage() {
 
       <div className="flex items-center justify-between mb-5">
         <button className="text-white/60 hover:text-white" onClick={() => nav('/league')}>
-          ← 돌아가기
+          ← {t('rankings.back')}
         </button>
-        <h2 className="text-2xl font-bold">🤝 친구초대 랭킹</h2>
+        <h2 className="text-2xl font-bold">🤝 {t('rankings.referralTitle')}</h2>
         <div className="w-12" />
       </div>
 
-      {load && <p className="text-center text-white/50 py-12">불러오는 중...</p>}
-      {err && <p className="text-center text-red-400 py-12">에러: {err}</p>}
+      {load && <p className="text-center text-white/50 py-12">{t('rankings.loading')}</p>}
+      {err && <p className="text-center text-red-400 py-12">{t('rankings.errorPrefix', { msg: err })}</p>}
 
       {!load && !err && !event && (
         <div className="text-center py-16 text-white/50">
           <div className="text-3xl mb-2">🤝</div>
-          진행 중인 친구추천 이벤트가 없어요.
+          {t('rankings.noReferralEvent')}
         </div>
       )}
 
@@ -77,7 +80,7 @@ export default function ReferralRankPage() {
 
           {rows.length === 0 ? (
             <div className="text-center py-12 text-white/50">
-              아직 추천 기록이 없어요. 첫 추천왕이 되어보세요!
+              {t('rankings.noReferralRecord')}
             </div>
           ) : (
             <>
@@ -100,10 +103,10 @@ export default function ReferralRankPage() {
                         <span className="text-right ml-2">
                           <div className="font-bold tabular-nums text-emerald-200">
                             {r.invited_count.toLocaleString()}
-                            <span className="text-xs text-white/40 ml-1">명</span>
+                            <span className="text-xs text-white/40 ml-1">{t('rankings.peopleUnit')}</span>
                           </div>
                           {r.last_invited_at && (
-                            <div className="text-[10px] text-white/40">{relativeTime(r.last_invited_at)}</div>
+                            <div className="text-[10px] text-white/40">{relativeTime(r.last_invited_at, t)}</div>
                           )}
                         </span>
                       </li>
@@ -129,6 +132,7 @@ const PODIUM_STYLE: Array<{ medal: string; bg: string; border: string; text: str
 ];
 
 function PodiumCard({ entry, index }: { entry: ReferralRankEntry; index: number }) {
+  const { t } = useTranslation();
   const s = PODIUM_STYLE[index] ?? PODIUM_STYLE[2];
   const isFirst = index === 0;
   return (
@@ -150,10 +154,10 @@ function PodiumCard({ entry, index }: { entry: ReferralRankEntry; index: number 
       </div>
       <div className={`text-2xl font-extrabold tabular-nums ${s.text}`}>
         {entry.invited_count.toLocaleString()}
-        <span className="text-sm text-white/40 ml-1">명</span>
+        <span className="text-sm text-white/40 ml-1">{t('rankings.peopleUnit')}</span>
       </div>
       {entry.last_invited_at && (
-        <div className="text-[10px] text-white/40 mt-1">최근 {relativeTime(entry.last_invited_at)}</div>
+        <div className="text-[10px] text-white/40 mt-1">{t('rankings.recent', { time: relativeTime(entry.last_invited_at, t) })}</div>
       )}
     </motion.div>
   );

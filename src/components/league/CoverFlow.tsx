@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import type { Category } from '../../api/types';
 
 // 아이팟 커버플로우 스타일 리그 갤러리 — 좌우 슬라이딩, 중앙 카드 강조(3D 원근).
 // 조작: ←/→ 버튼 · 좌우 스와이프(드래그) · 옆 카드 클릭(중앙으로) · 중앙 카드 클릭(입장) · 키보드 ←/→.
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  coming_soon: { label: '오픈예정', cls: 'bg-amber-500/20 border-amber-400/50 text-amber-200' },
-  ended: { label: '종료', cls: 'bg-white/10 border-white/25 text-white/65' },
+const STATUS_BADGE: Record<string, { labelKey: string; cls: string }> = {
+  coming_soon: { labelKey: 'league.comingSoonBadge', cls: 'bg-amber-500/20 border-amber-400/50 text-amber-200' },
+  ended: { labelKey: 'league.ended', cls: 'bg-white/10 border-white/25 text-white/65' },
 };
 
 interface CoverFlowProps {
@@ -19,6 +20,7 @@ interface CoverFlowProps {
 }
 
 export default function CoverFlow({ items, isRanking, onEnter, onRanking }: CoverFlowProps) {
+  const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [w, setW] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
 
   if (items.length === 0) {
     return (
-      <div className="text-center text-white/45 py-16">이 카테고리에 리그가 아직 없어요.</div>
+      <div className="text-center text-white/45 py-16">{t('league.emptyCategory')}</div>
     );
   }
 
@@ -153,17 +155,18 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
         </div>
         <NavArrow dir="next" disabled={active === items.length - 1} onClick={() => go(1)} />
       </div>
-      <p className="text-center text-[11px] text-white/40 mt-2">← → 또는 좌우로 밀어 선택 · 가운데 카드를 눌러 입장</p>
+      <p className="text-center text-[11px] text-white/40 mt-2">{t('league.coverFlowHint')}</p>
     </div>
   );
 }
 
 function NavArrow({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      aria-label={dir === 'prev' ? '이전 리그' : '다음 리그'}
+      aria-label={dir === 'prev' ? t('league.prevLeague') : t('league.nextLeague')}
       className={`w-11 h-11 rounded-full border flex items-center justify-center text-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
         disabled
           ? 'border-white/10 text-white/20 cursor-not-allowed'
@@ -188,6 +191,7 @@ function CoverCard({
   onEnter: (cat: Category) => void;
   onRanking?: (cat: Category) => void;
 }) {
+  const { t } = useTranslation();
   const isComingSoon = cat.status === 'coming_soon';
   const isEnded = cat.status === 'ended';
   const badge = STATUS_BADGE[cat.status];
@@ -206,11 +210,11 @@ function CoverCard({
       <div className="relative flex items-center gap-2 flex-wrap">
         {cat.is_super_beginner === 'Y' && (
           <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-sky-500/25 border border-sky-400/50 text-sky-200">
-            🐣 생초보
+            🐣 {t('league.beginner')}
           </span>
         )}
         {badge && (
-          <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${badge.cls}`}>{badge.label}</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${badge.cls}`}>{t(badge.labelKey)}</span>
         )}
         <span className="ml-auto text-[11px] px-2 py-0.5 rounded bg-black/30 text-white/70 whitespace-nowrap">
           {cat.lang.toUpperCase()} · Lv{cat.difficulty}
@@ -221,9 +225,9 @@ function CoverCard({
       <p className="relative mt-2 text-sm text-white/55 line-clamp-3 grow">{cat.description}</p>
 
       {isComingSoon && cat.open_at ? (
-        <p className="relative text-[11px] text-amber-200/70 mb-2">🗓 {cat.open_at} 오픈 예정</p>
+        <p className="relative text-[11px] text-amber-200/70 mb-2">🗓 {t('league.openOn', { date: cat.open_at })}</p>
       ) : cat.open_at && cat.close_at ? (
-        <p className="relative text-[11px] text-white/45 mb-2">🗓 {cat.open_at} ~ {cat.close_at}</p>
+        <p className="relative text-[11px] text-white/45 mb-2">🗓 {t('league.dateRange', { open: cat.open_at, close: cat.close_at })}</p>
       ) : null}
 
       {/* CTA — 중앙 카드에서만 노출 */}
@@ -238,7 +242,7 @@ function CoverCard({
             }}
             className="btn-primary py-2.5 px-4 text-sm flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isComingSoon ? '오픈예정' : isRanking ? '입장하기' : isEnded ? '다시 플레이' : '플레이'}
+            {isComingSoon ? t('league.comingSoonBadge') : isRanking ? t('league.enter') : isEnded ? t('league.playAgain') : t('league.play')}
           </button>
           {isRanking && onRanking && (
             <button
@@ -248,7 +252,7 @@ function CoverCard({
                 onRanking(cat);
               }}
               className="btn-ghost py-2.5 px-3 text-sm"
-              title="이 리그 랭킹"
+              title={t('league.thisLeagueRankings')}
             >
               🏆
             </button>
