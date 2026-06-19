@@ -21,6 +21,7 @@ import DrawPage from './pages/DrawPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import TopBar from './components/TopBar';
+import LocaleSuggestBanner from './components/LocaleSuggestBanner';
 import SceneBackground from './components/SceneBackground';
 import MaintenanceGate from './components/MaintenanceGate';
 import { getAppStatus } from './api/status';
@@ -51,6 +52,8 @@ export default function App() {
       <SceneBackground />
       {/* 공용 상단 바 — 로그인/초대(좌) · 홈(우), 주요 네비 페이지 고정 */}
       <TopBar />
+      {/* 한국어 브라우저 첫 방문자에게 "한국어로 보기" 안내 (영어 루트에서만) */}
+      <LocaleSuggestBanner />
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/test" element={<TypingTestPage />} />

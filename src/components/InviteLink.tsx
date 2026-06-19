@@ -17,9 +17,10 @@ export default function InviteLink({ className = '' }: { className?: string }) {
   const [copied, setCopied] = useState(false);
   const [invitedCount, setInvitedCount] = useState<number | null>(null);
 
-  // 내 초대 링크 (HashRouter 라 ?ref 는 hash 앞에)
+  // 내 초대 링크 — 현재 경로가 아니라 locale 루트(en=/, ko=/kr) 기준으로 생성.
+  const localeRoot = window.location.pathname.startsWith('/kr') ? '/kr' : '';
   const inviteUrl = user
-    ? `${window.location.origin}${window.location.pathname}?ref=${user.seq}`
+    ? `${window.location.origin}${localeRoot}/?ref=${user.seq}`
     : '';
 
   useEffect(() => {

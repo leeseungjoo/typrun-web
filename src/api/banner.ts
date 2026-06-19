@@ -1,4 +1,4 @@
-import { request } from './client';
+import { request, currentLang } from './client';
 
 export type BannerData = {
   seq: number;
@@ -14,7 +14,7 @@ export type BannerData = {
 
 // 위치별 노출 배너 1개 조회 (서버에서 가중치 랜덤 선택 + 노출수 집계)
 export function getBanner(slot: string, isMember = false): Promise<BannerData> {
-  return request<BannerData>(`/banners?slot=${encodeURIComponent(slot)}${isMember ? '&member=1' : ''}`);
+  return request<BannerData>(`/banners?slot=${encodeURIComponent(slot)}${isMember ? '&member=1' : ''}&lang=${currentLang()}`);
 }
 
 // 배너 클릭 집계

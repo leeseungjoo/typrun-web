@@ -96,8 +96,9 @@ export default function LoginPage() {
       const r = localStorage.getItem('typrun_invite_ref');
       if (r && /^\d+$/.test(r)) refParam = `&ref=${encodeURIComponent(r)}`;
     } catch { /* ignore */ }
-    // HashRouter — 콜백 후 /login 라우트로 돌아와서 useEffect 가 ?auth=ok 처리
-    const ret = encodeURIComponent(window.location.origin + window.location.pathname + '#/login');
+    // BrowserRouter — 콜백 후 현재 로그인 경로(/login 또는 /kr/login, locale 보존)로 복귀.
+    // 서버가 return 에 ?auth=ok 를 붙여 리다이렉트 → useEffect 가 search 에서 처리.
+    const ret = encodeURIComponent(window.location.origin + window.location.pathname);
     window.location.href = `${API_BASE}/auth/${provider}/url?return=${ret}${refParam}`;
   };
 

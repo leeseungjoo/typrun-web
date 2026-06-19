@@ -13,7 +13,14 @@ import type {
   BattleRankingsResponse,
 } from './types';
 
+import i18n from '../i18n';
+
 const BASE = import.meta.env.VITE_API_BASE_URL;
+
+// 현재 사이트 언어(en=루트 / ko=/kr) — 서버에 리그·배너 언어 필터로 전달.
+export function currentLang(): 'ko' | 'en' {
+  return i18n.language === 'ko' ? 'ko' : 'en';
+}
 
 // 공용 요청 헬퍼 — 같은 봉투 규약을 쓰는 다른 api 모듈(battle.ts 등)에서도 재사용.
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -35,9 +42,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // 카테고리 목록
+  // 카테고리 목록 (사이트 언어별 — en=영어 리그만, ko=한국+혼합)
   categories(): Promise<Category[]> {
-    return request<Category[]>('/categories');
+    return request<Category[]>(`/categories?lang=${currentLang()}`);
   },
 
   // 현재 시즌
