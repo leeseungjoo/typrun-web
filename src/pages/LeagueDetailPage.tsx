@@ -118,6 +118,15 @@ export default function LeagueDetailPage() {
               badge={!playable ? t('league.comingSoonBadge') : BATTLE_ENABLED ? t('league.beta') : t('league.comingSoon')}
               onClick={() => nav(`/battle/${cat.seq}/2p`)}
             />
+            {/* 친구 초대 1:1 — 링크 공유로 비회원 친구도 바로 대결(바이럴 루프 진입점) */}
+            <ModeButton
+              emoji="🔗"
+              title={t('league.inviteBattle')}
+              subtitle={t('league.inviteBattleDesc')}
+              ready={BATTLE_ENABLED && playable}
+              badge={playable && BATTLE_ENABLED ? t('league.beta') : undefined}
+              onClick={() => nav(`/battle/invite/new/${cat.seq}`)}
+            />
           </div>
 
           <button onClick={() => nav(`/rankings/${cat.seq}`)} className="btn-ghost w-full mt-5">

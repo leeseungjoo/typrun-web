@@ -34,6 +34,10 @@ interface BattleGameProps {
   you: number;
   running: boolean;
   onExit: () => void;
+  // 친구 초대 대결(게스트 전환): 비회원이면 결과화면을 가입 유도 CTA 로 전환.
+  isGuest?: boolean;
+  inviterRef?: number; // 초대한 호스트 seq — 가입 시 추천인으로 귀속(?ref)
+  onRematch?: () => void; // 호스트 '한 번 더' — 제공되면 기본 랜덤큐 이동 대신 재초대 흐름
 }
 
 interface Result {
@@ -55,9 +59,20 @@ export default function BattleGame({
   you,
   running,
   onExit,
+  isGuest = false,
+  inviterRef,
+  onRematch,
 }: BattleGameProps) {
   const nav = useNavigate();
   const { t } = useTranslation();
+
+  // 게스트 가입 전환 — 추천인(호스트 seq)을 localStorage 에 심고 로그인/가입으로(가입 시 ?ref 귀속).
+  const goSignup = useCallback(() => {
+    if (inviterRef && inviterRef > 0) {
+      try { localStorage.setItem('typrun_invite_ref', String(inviterRef)); } catch { /* ignore */ }
+    }
+    nav('/login');
+  }, [inviterRef, nav]);
   const [pool, setPool] = useState<Word[] | null>(null);
   const oppNickname = players.find((p) => p.userSeq !== you)?.nickname ?? t('battle.opponent');
   const myNickname = players.find((p) => p.userSeq === you)?.nickname ?? t('battle.you');
@@ -227,8 +242,8 @@ export default function BattleGame({
         if (mine) {
           const voided = Math.max(mine.finalScore, top) < WIN_THRESHOLD;
           setResult({ mine: mine.finalScore, top, outcome: mine.result, official: true, voided });
-          // 전적 영속(자기 결과 자기보고, fire-and-forget). 서버 엔드포인트 배포 후 자동 활성화.
-          if (!recordedRef.current) {
+          // 전적 영속(자기 결과 자기보고, fire-and-forget). 게스트(비회원)는 세션이 없어 기록 생략.
+          if (!recordedRef.current && !isGuest) {
             recordedRef.current = true;
             api
               .recordBattle({
@@ -245,7 +260,7 @@ export default function BattleGame({
       }
     });
     return off;
-  }, [socket, you, matchSeed, matchId, categorySeq, applyIncomingEffect, bumpOppTyping, finishNow, removeWord, applySyncEffect, removeByIds, addWordsRemote]);
+  }, [socket, you, matchSeed, matchId, categorySeq, isGuest, applyIncomingEffect, bumpOppTyping, finishNow, removeWord, applySyncEffect, removeByIds, addWordsRemote]);
 
   // 게임 중 아무 키나 누르면 입력칸 포커스 유지.
   useEffect(() => {
@@ -340,25 +355,44 @@ export default function BattleGame({
           {result.official ? t('battle.officialResult') : t('battle.tempResult')}
         </p>
 
-        {/* 통일 하단 버튼 — 다시도전 / 랭킹보기 / 리그선택 / 홈 */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <button
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!canExit}
-            onClick={() => nav(`/battle/${categorySeq}/2p`, { replace: true })}
-          >
-            🔁 {t('battle.tryAgain')}
-          </button>
-          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav(`/rankings/${categorySeq}`)}>
-            🏆 {t('battle.viewRankings')}
-          </button>
-          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/league')}>
-            {t('battle.selectLeague')}
-          </button>
-          <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/')}>
-            {t('battle.home')}
-          </button>
-        </div>
+        {isGuest ? (
+          /* 게스트 전환 CTA — 배틀 끝 = 가입 전환의 순간. 점수를 미끼로 가입 유도. */
+          <div className="flex flex-col items-center gap-3 w-full max-w-sm">
+            <p className="text-[13px] text-amber-200/90 text-center" aria-hidden>
+              ✨ {t('battle.guestNudge', { score: result.mine.toLocaleString() })}
+            </p>
+            <button
+              className="btn-primary w-full text-base py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canExit}
+              onClick={goSignup}
+            >
+              🎮 {t('battle.guestSignupCta')}
+            </button>
+            <button className="btn-ghost w-full disabled:opacity-50" disabled={!canExit} onClick={() => nav('/')}>
+              🏠 {t('battle.guestExplore')}
+            </button>
+          </div>
+        ) : (
+          /* 통일 하단 버튼 — 다시도전 / 랭킹보기 / 리그선택 / 홈 */
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canExit}
+              onClick={onRematch ?? (() => nav(`/battle/${categorySeq}/2p`, { replace: true }))}
+            >
+              🔁 {onRematch ? t('battle.inviteAgain') : t('battle.tryAgain')}
+            </button>
+            <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav(`/rankings/${categorySeq}`)}>
+              🏆 {t('battle.viewRankings')}
+            </button>
+            <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/league')}>
+              {t('battle.selectLeague')}
+            </button>
+            <button className="btn-ghost disabled:opacity-50" disabled={!canExit} onClick={() => nav('/')}>
+              {t('battle.home')}
+            </button>
+          </div>
+        )}
         {!canExit && <p className="text-[11px] text-white/35 mt-3">{t('battle.checkingResult')}</p>}
       </div>
     );

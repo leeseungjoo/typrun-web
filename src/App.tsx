@@ -6,6 +6,7 @@ import MainPage from './pages/MainPage';
 import LeaguePage from './pages/LeaguePage';
 import LeagueDetailPage from './pages/LeagueDetailPage';
 import BattleLobbyPage from './pages/BattleLobbyPage';
+import InviteBattlePage from './pages/InviteBattlePage';
 import GamePage from './pages/GamePage';
 import GameOverPage from './pages/GameOverPage';
 import TypingTestPage from './pages/TypingTestPage';
@@ -66,6 +67,9 @@ export default function App() {
         <Route path="/league" element={<LeaguePage />} />
         <Route path="/league/:categorySeq" element={<LeagueDetailPage />} />
         <Route path="/battle/:categorySeq/:mode" element={<BattleLobbyPage />} />
+        {/* 친구 초대 대결 — 생성(로그인 호스트) / 입장(비회원 게스트 가능). new/:cat 가 :code 보다 구체적이라 우선 매칭. */}
+        <Route path="/battle/invite/new/:categorySeq" element={<InviteBattlePage mode="create" />} />
+        <Route path="/battle/invite/:code" element={<InviteBattlePage mode="join" />} />
         <Route path="/game/:categorySeq" element={<GamePage />} />
         <Route path="/game-over" element={<GameOverPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
