@@ -1,6 +1,6 @@
 // 타자 테스트(monkeytype식) — 깔끔/즉시시작/무로그인. locale-aware(한글 타수 · 영문 WPM).
 // UI 문자열은 i18n(t), 콘텐츠 언어(한글/English) 토글은 별개. 콘텐츠 기본값은 UI 언어를 따른다.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -50,6 +50,10 @@ export default function TypingTestPage() {
   const [duration, setDuration] = useState(30);
   const [focused, setFocused] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+  // 단일 라인 가로 스크롤(타자기식) — 현재 단어를 고정 위치에 두고 텍스트가 왼쪽으로 흐른다(줄바꿈 대신).
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const currentWordRef = useRef<HTMLSpanElement>(null);
+  const [scrollX, setScrollX] = useState(0);
 
   const test = useTypingTest(locale, duration);
   const { user } = useAuth();
@@ -102,6 +106,21 @@ export default function TypingTestPage() {
 
   const start = Math.max(0, test.wordIndex - WINDOW_BACK);
   const visible = test.words.slice(start, start + WINDOW_SIZE);
+
+  // 현재 단어를 뷰포트 32% 지점에 고정 → 진행할수록 텍스트가 왼쪽으로 흐른다(앞쪽은 0으로 클램프해 좌측정렬 유지).
+  const recenter = useCallback(() => {
+    const vp = viewportRef.current;
+    const cw = currentWordRef.current;
+    if (!vp || !cw) return;
+    setScrollX(Math.min(0, vp.clientWidth * 0.32 - cw.offsetLeft));
+  }, []);
+  useLayoutEffect(() => {
+    recenter();
+  }, [recenter, test.wordIndex, start, locale, duration, focused, test.status, test.words]);
+  useEffect(() => {
+    window.addEventListener('resize', recenter);
+    return () => window.removeEventListener('resize', recenter);
+  }, [recenter]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
@@ -159,33 +178,40 @@ export default function TypingTestPage() {
             </div>
           </div>
 
-          {/* 단어 영역 (입력창 오버레이) */}
+          {/* 단어 영역 — 단일 라인 가로 스크롤(타자기식). 줄바꿈 대신 현재 단어가 고정 위치에 머물고 텍스트가 왼쪽으로 흐른다. */}
           <div
             className="relative w-full max-w-4xl cursor-text"
             onClick={focusInput}
           >
-            <div
-              className={`text-2xl md:text-3xl font-bold leading-relaxed tracking-wide tt-text select-none transition ${
-                focused ? '' : 'blur-[3px] opacity-60'
-              }`}
-              lang={locale}
-            >
-              {visible.map((w, k) => {
-                const gi = start + k;
-                const state: WordState =
-                  gi < test.wordIndex ? 'done' : gi === test.wordIndex ? 'current' : 'todo';
-                const typed =
-                  gi < test.wordIndex
-                    ? test.typedWords[gi] ?? ''
-                    : gi === test.wordIndex
-                    ? test.current
-                    : '';
-                return (
-                  <span key={gi} className="inline-block mr-3 mb-1">
-                    {renderWord(w, typed, state)}
-                  </span>
-                );
-              })}
+            <div ref={viewportRef} className="overflow-hidden py-1">
+              <div
+                className={`whitespace-nowrap text-2xl md:text-3xl font-bold tracking-wide tt-text select-none will-change-transform ${
+                  focused ? '' : 'blur-[3px] opacity-60'
+                }`}
+                style={{ transform: `translateX(${scrollX}px)`, transition: 'transform 160ms ease-out' }}
+                lang={locale}
+              >
+                {visible.map((w, k) => {
+                  const gi = start + k;
+                  const state: WordState =
+                    gi < test.wordIndex ? 'done' : gi === test.wordIndex ? 'current' : 'todo';
+                  const typed =
+                    gi < test.wordIndex
+                      ? test.typedWords[gi] ?? ''
+                      : gi === test.wordIndex
+                      ? test.current
+                      : '';
+                  return (
+                    <span
+                      key={gi}
+                      ref={gi === test.wordIndex ? currentWordRef : undefined}
+                      className="inline-block mr-3"
+                    >
+                      {renderWord(w, typed, state)}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
 
             {!focused && (
