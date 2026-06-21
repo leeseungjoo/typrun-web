@@ -54,6 +54,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
   const categorySeq = Number(catParam);
   const code = (codeParam || '').toUpperCase();
   const inviterRef = Number(search.get('ref')) || undefined;
+  const rm = search.get('rm'); // 호스트 '한 번 더' 재초대 nonce — 같은 URL 이라도 effect 재실행/방 재생성 트리거
 
   const asGuest = pageMode === 'join' && !loading && !user;
   const [guestNick, setGuestNick] = useState('');
@@ -61,6 +62,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
 
   const sockRef = useRef<BattleSocket | null>(null);
   const matchedRef = useRef(false);
+  const startedRef = useRef(false); // match:cancelled 가 게임 시작 후 화면을 빼앗지 않도록(onMessage 클로저 stale 방지)
 
   const [conn, setConn] = useState<SocketState>('connecting');
   const [shareCode, setShareCode] = useState<string | null>(null);
@@ -81,6 +83,11 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
     },
     [t],
   );
+
+  // startedRef 동기화 — onMessage 클로저에서 최신 started 를 stale 없이 읽기 위함.
+  useEffect(() => {
+    startedRef.current = started;
+  }, [started]);
 
   // 생성 모드: 리그명 표시.
   useEffect(() => {
@@ -108,7 +115,14 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
       if (!user && !guestReady) return; // 게스트는 닉 입력 후 연결
     }
 
+    // (재)연결 시작 시 이전 상태 초기화 — 호스트 '한 번 더'(rm 변경)로 같은 페이지가 재실행될 때 깨끗이 새 방.
     matchedRef.current = false;
+    startedRef.current = false;
+    setMatch(null);
+    setStarted(false);
+    setShareCode(null);
+    setErr(null);
+    setCountdownSec(null);
     const nick = user ? user.nickname : guestNick.trim() || t('inviteBattle.guestDefaultNick');
     const sock = asGuest
       ? new BattleSocket(`${WS_BASE}?guest=${encodeURIComponent(guestToken())}&n=${encodeURIComponent(nick)}`)
@@ -157,6 +171,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
           setStarted(true);
           break;
         case 'match:cancelled':
+          if (startedRef.current) break; // 게임 시작 후엔 무시 — 진행 중 화면을 빼앗지 않음(취소는 카운트다운 전까지만)
           matchedRef.current = false;
           setMatch(null);
           setStarted(false);
@@ -179,9 +194,9 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
       sock.close();
       sockRef.current = null;
     };
-    // guestNick 은 연결 시점에 캡처(매 키입력 재연결 방지) — guestReady 가 게이트.
+    // guestNick 은 연결 시점에 캡처(매 키입력 재연결 방지) — guestReady 가 게이트. rm=재초대 nonce 로 재실행.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user, pageMode, categorySeq, code, guestReady, asGuest]);
+  }, [loading, user, pageMode, categorySeq, code, guestReady, asGuest, rm]);
 
   // 재연결로 match:start 를 놓쳐 카운트다운 고착 방지: 0 도달 후 2.5s 지나면 시작 처리.
   useEffect(() => {
@@ -255,7 +270,9 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
         onExit={() => nav('/')}
         isGuest={asGuest}
         inviterRef={inviterRef}
-        onRematch={user ? () => nav(`/battle/invite/new/${match.categorySeq}`, { replace: true }) : undefined}
+        onRematch={
+          user ? () => nav(`/battle/invite/new/${match.categorySeq}?rm=${Date.now()}`, { replace: true }) : undefined
+        }
       />
     );
   }
