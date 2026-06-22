@@ -18,6 +18,10 @@
 html, body, #root {
   height: 100%;
 }
+/* 어떤 요소가 한 번 넘쳐도 가로 스크롤이 생기지 않게(모바일 가로 흔들림 방지) */
+html, body {
+  overflow-x: clip;
+}
 
 body {
   margin: 0;
@@ -25,6 +29,11 @@ body {
   color: #fff;
   font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* iOS Safari 는 16px 미만 입력칸 포커스 시 화면을 확대(레이아웃 튐) → 모바일에선 입력 글자 최소 16px 보장 */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px; }
 }
 
 /* 배경 별비 — 위에서 아래로 떨어지는 별(전 페이지, SceneBackground). transform/opacity 만 애니메이션(가벼움) */
@@ -43,9 +52,18 @@ body {
   animation: star-fall var(--tw-dur, 9s) linear infinite;
   animation-delay: var(--tw-delay, 0s);
 }
+/* 동작 줄이기(저전력 모드 포함): 낙하는 멈추되 죽은 화면이 되지 않게 제자리에서 은은히 반짝(이동 없음=전정기관 안전) */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: var(--tw-max, 0.85); }
+}
 @media (prefers-reduced-motion: reduce) {
-  /* 동작 줄이기: 낙하 정지 + 초기 분포 위치에 은은히 고정 */
-  .tw-star { animation: none; opacity: 0.4; transform: none; top: var(--tw-rest, 30%); }
+  .tw-star {
+    transform: none;
+    top: var(--tw-rest, 30%);
+    animation: star-twinkle var(--tw-dur, 9s) ease-in-out infinite;
+    animation-delay: var(--tw-delay, 0s);
+  }
 }
 
 /* 타자 테스트 본문 — 나눔고딕(한글/영문 공용) */
@@ -85,7 +103,7 @@ body {
 }
 
 .input {
-  @apply px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50;
+  @apply px-4 py-3 text-base rounded-xl bg-white/10 border border-white/20 outline-none focus:border-white/50;
 }
 
 /* 메인 디자인 버튼 — 빨강 CTA / 테두리 라인 (Figma 301-62) */

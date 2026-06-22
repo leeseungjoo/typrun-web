@@ -38,7 +38,7 @@ export default function App() {
 
   if (maint?.on) {
     return (
-      <MotionConfig reducedMotion="user">
+      <MotionConfig reducedMotion="never">
         <SceneBackground />
         <MaintenanceGate message={maint.msg} />
       </MotionConfig>
@@ -46,8 +46,9 @@ export default function App() {
   }
 
   return (
-    // reducedMotion="user" — OS '동작 줄이기' 설정 시 모든 framer-motion 연출 자동 감속(a11y).
-    <MotionConfig reducedMotion="user">
+    // reducedMotion="never" — 폰 저전력/동작줄이기에서도 슬라이드·전환 모션 유지(게임 특성상 모션이 핵심).
+    // 배경 별은 동작줄이기 시 낙하 대신 은은한 트윙클로 대체(index.css star-twinkle)라 전정기관 안전.
+    <MotionConfig reducedMotion="never">
       <AuthProvider>
       {/* 세션 테마 배경 — 모든 페이지에 연속 적용 (배경 고정 + 캐릭터 둥실) */}
       <SceneBackground />
