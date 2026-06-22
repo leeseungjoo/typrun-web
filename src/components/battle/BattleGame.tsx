@@ -7,6 +7,7 @@ import { clearScore } from '../../lib/score';
 import { canonicalPool, computeSpawn } from '../../lib/battleSpawn';
 import { ITEM_POOL, type ItemEffect } from '../../lib/items';
 import { useBattleEngine, INITIAL_HP } from '../../hooks/useBattleEngine';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import type { BattleSocket } from '../../lib/battleSocket';
 import type { PlayerInfo } from '../../lib/battleProtocol';
 import type { Word } from '../../api/types';
@@ -65,6 +66,7 @@ export default function BattleGame({
 }: BattleGameProps) {
   const nav = useNavigate();
   const { t } = useTranslation();
+  const kbInset = useKeyboardInset(); // 모바일 키보드 높이 — 하단 입력/아이템을 키보드 위로 올리기 위함
 
   // 게스트 가입 전환 — 추천인(호스트 seq)을 localStorage 에 심고 로그인/가입으로(가입 시 ?ref 귀속).
   const goSignup = useCallback(() => {
@@ -453,8 +455,11 @@ export default function BattleGame({
         </div>
       </div>
 
-      {/* 본문 — 전체 폭 내 필드: 단어가 화면 전체에서 내려온다(한쪽 몰림 해소) */}
-      <div className="absolute top-[60px] bottom-[150px] inset-x-0 overflow-hidden">
+      {/* 본문 — 전체 폭 내 필드: 단어가 화면 전체에서 내려온다(한쪽 몰림 해소). 모바일 키보드만큼 하단을 더 띄움. */}
+      <div
+        className="absolute top-[60px] inset-x-0 overflow-hidden"
+        style={{ bottom: 150 + kbInset }}
+      >
         <AnimatePresence>
           {eng.active.map((a) => (
             <motion.div
@@ -523,8 +528,11 @@ export default function BattleGame({
         ))}
       </div>
 
-      {/* 하단 — 아이템덱 + 효과 + 양분 입력 */}
-      <div className="absolute bottom-0 inset-x-0 z-30 border-t border-white/10 bg-black/40 backdrop-blur-sm">
+      {/* 하단 — 아이템덱 + 효과 + 양분 입력. 모바일 키보드가 가리지 않게 키보드 높이만큼 위로. */}
+      <div
+        className="absolute bottom-0 inset-x-0 z-30 border-t border-white/10 bg-black/40 backdrop-blur-sm transition-transform"
+        style={kbInset ? { transform: `translateY(-${kbInset}px)` } : undefined}
+      >
         {/* 활성 효과 + 방어막 */}
         {(eng.effects.length > 0 || eng.shields > 0) && (
           <div className="px-3 pt-1.5 flex items-center justify-center gap-2 flex-wrap">

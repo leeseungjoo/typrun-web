@@ -122,8 +122,9 @@ export default function TypingTestPage() {
     return () => window.removeEventListener('resize', recenter);
   }, [recenter]);
 
+  // 모바일: 세로 중앙정렬하면 단어가 화면 한가운데→키보드에 가림. 상단정렬로 올려 키보드 위에 둔다. md+는 기존 중앙.
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-start md:justify-center px-6 pt-20 pb-12 md:py-12">
       {/* 헤더 */}
       <div className="text-center mb-6">
         <h1 className="font-impact text-4xl md:text-5xl tracking-wide">{t('test.title')}</h1>
@@ -246,7 +247,13 @@ export default function TypingTestPage() {
 
           {/* 하단 액션 */}
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-            <button className="btn-ghost text-sm" onClick={test.restart}>
+            <button
+              className="btn-ghost text-sm"
+              onClick={() => {
+                test.restart();
+                inputRef.current?.focus(); // 진행 중 입력칸은 마운트돼 있어 제스처 내 focus → 모바일 키보드 유지
+              }}
+            >
               ↻ {t('test.restart')}
             </button>
             <button className="btn-ghost text-sm" onClick={() => nav('/test/stats')}>

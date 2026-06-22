@@ -89,7 +89,8 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6"
+      /* 모바일: 상단정렬 + 오버레이 스크롤 → 키보드가 올라와도 전송 버튼까지 스크롤 가능(중앙정렬이면 가려서 제출 불가) */
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
     >
       <motion.div
         initial={{ scale: 0.94, opacity: 0 }}
@@ -97,7 +98,7 @@ export default function ContactModal({ onClose, defaultKind = 'inquiry' }: Conta
         exit={{ scale: 0.94, opacity: 0 }}
         transition={{ duration: 0.18 }}
         onClick={(e) => e.stopPropagation()}
-        className="card w-full max-w-md"
+        className="card w-full max-w-md my-auto max-h-[90dvh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">🤝 {t('widgets.inquiry')}</h3>

@@ -70,14 +70,20 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
   const onPointerDown = (e: React.PointerEvent) => {
     startX.current = e.clientX;
     moved.current = false;
+    // 포인터 캡처: 가로 스와이프 도중 브라우저 제스처가 포인터를 가로채 up 이벤트를 놓치는 것 방지(모바일 스와이프 신뢰성).
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* 미지원 무시 */
+    }
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (Math.abs(e.clientX - startX.current) > 8) moved.current = true;
   };
   const onPointerUp = (e: React.PointerEvent) => {
     const dx = e.clientX - startX.current;
-    if (dx <= -40) go(1);
-    else if (dx >= 40) go(-1);
+    if (dx <= -30) go(1); // 짧은 폰 스와이프도 인식되게 임계값 40→30
+    else if (dx >= 30) go(-1);
   };
 
   return (
@@ -142,15 +148,20 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
       {/* 좌우 버튼 + 인덱스 */}
       <div className="flex items-center justify-center gap-5 mt-4">
         <NavArrow dir="prev" disabled={active === 0} onClick={() => go(-1)} />
-        <div className="flex items-center gap-1.5" aria-hidden>
+        <div className="flex items-center gap-0.5">
           {items.map((c, i) => (
             <button
               key={c.seq}
               onClick={() => setActive(i)}
-              className={`h-2 rounded-full transition-all ${
-                i === active ? 'w-5 bg-white/85' : 'w-2 bg-white/30 hover:bg-white/50'
-              }`}
-            />
+              aria-label={c.name || `${i + 1}`}
+              className="flex items-center px-1 py-3" /* 투명 패딩으로 ~44px 터치 타깃(시각 바는 그대로 h-2) */
+            >
+              <span
+                className={`block h-2 rounded-full transition-all ${
+                  i === active ? 'w-5 bg-white/85' : 'w-2 bg-white/30 hover:bg-white/50'
+                }`}
+              />
+            </button>
           ))}
         </div>
         <NavArrow dir="next" disabled={active === items.length - 1} onClick={() => go(1)} />
