@@ -70,15 +70,20 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
   const onPointerDown = (e: React.PointerEvent) => {
     startX.current = e.clientX;
     moved.current = false;
-    // 포인터 캡처: 가로 스와이프 도중 브라우저 제스처가 포인터를 가로채 up 이벤트를 놓치는 것 방지(모바일 스와이프 신뢰성).
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      /* 미지원 무시 */
-    }
+    // ★ 여기서 캡처하면 안 됨 — 탭(이동 없음)까지 캡처되면 click 타깃이 스테이지로 바뀌어 카드 '입장'이 안 먹힌다.
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (Math.abs(e.clientX - startX.current) > 8) moved.current = true;
+    if (Math.abs(e.clientX - startX.current) > 8) {
+      // 드래그가 실제 시작된 뒤에만 캡처 → 스와이프 도중 포인터 유실 방지(탭은 캡처 안 되어 입장 정상).
+      if (!moved.current) {
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* 미지원 무시 */
+        }
+      }
+      moved.current = true;
+    }
   };
   const onPointerUp = (e: React.PointerEvent) => {
     const dx = e.clientX - startX.current;
