@@ -6,6 +6,7 @@ import { api } from '../api/client';
 import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
+import { useVisualViewportBox } from '../hooks/useKeyboardInset';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -83,6 +84,7 @@ export default function GamePage() {
   const { categorySeq } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
+  const vvBox = useVisualViewportBox(); // 모바일 키보드 올라온 만큼 게임 화면을 '보이는 영역'으로 고정(낙하 시작점이 화면 밖으로 안 나가게)
   const [eventTitle, setEventTitle] = useState<string | null>(null);
   // 활성 친구추천 이벤트 → 게임화면 랭크확인(초대) 버튼
   useEffect(() => {
@@ -388,6 +390,23 @@ export default function GamePage() {
     });
   }, [phase]);
 
+  // 플레이 중 브라우저 '뒤로가기' 가드 — 화면 안 '그만두기'와 동일하게 확인 후 이탈.
+  // (HashRouter→BrowserRouter 컷오버로 백버튼이 실제 history를 pop → 확인 없이 튕기고
+  //  진행 점수가 날아가던 문제 방지. sentinel 항목을 쌓아 첫 뒤로가기를 이 화면에서 가로챈다.)
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    window.history.pushState({ gameGuard: true }, '');
+    const onPop = () => {
+      if (window.confirm(t('game.quitConfirm'))) {
+        nav('/league');
+      } else {
+        window.history.pushState({ gameGuard: true }, ''); // 취소 → 가드 복원
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [phase, t, nav]);
+
   // 비정상 입력 차단 시 잠깐 안내 플래시
   const flashInputWarn = () => {
     setInputWarn(true);
@@ -668,7 +687,14 @@ export default function GamePage() {
   const comboMul = combo > 0 ? combo * tierFactor(combo) : 0;
 
   return (
-    <div className="h-screen relative overflow-hidden">
+    // 보이는 시각 뷰포트에 딱 맞게 고정 — 키보드가 올라오면 그만큼 줄어들어 낙하 시작점(상단)·입력칸이 모두 화면 안.
+    // visualViewport 미지원/데스크톱은 100dvh 풀스크린(동일 동작).
+    <div
+      className="fixed inset-x-0 overflow-hidden"
+      style={{ top: vvBox?.top ?? 0, height: vvBox ? vvBox.height : '100dvh' }}
+      // 모바일 포커스 캐처: 화면 아무 데나 탭하면 입력칸 재포커스 → 키보드 닫혀도 제스처 내 focus 로 다시 올림(데스크톱은 무해).
+      onPointerDown={() => inputRef.current?.focus()}
+    >
       {/* HUD — 상단 오버레이 */}
       <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm">
         <div className="flex items-center gap-4">

@@ -34,3 +34,27 @@ export function useKeyboardInset(threshold = 120): number {
 
   return inset;
 }
+
+/**
+ * 보이는 시각 뷰포트의 위치/높이(px). 전체화면 게임 컨테이너를 이 박스 크기로 고정하면
+ * 키보드가 올라와도 (HUD·낙하시작점·입력칸이) 모두 보이는 영역 안에 들어와 iOS 문서 스크롤이 안 일어난다.
+ * visualViewport 미지원 시 null → 호출부에서 100vh 폴백.
+ */
+export function useVisualViewportBox(): { top: number; height: number } | null {
+  const [box, setBox] = useState<{ top: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setBox({ top: Math.round(vv.offsetTop), height: Math.round(vv.height) });
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  return box;
+}
