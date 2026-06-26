@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useTypingTest } from '../hooks/useTypingTest';
+import { track } from '../lib/track';
 import { useAuth } from '../contexts/AuthContext';
 import { typingApi, type TypingSaveResponse } from '../api/typing';
 import Segmented from '../components/typing/Segmented';
@@ -89,6 +90,17 @@ export default function TypingTestPage() {
   }, [test.status, test.result, user]);
 
   const focusInput = () => inputRef.current?.focus();
+
+  // 퍼널 측정: 첫 타격으로 테스트 시작(running) 시 1회 기록(게스트 포함). 다음 판 위해 idle 에서 리셋.
+  const typingTrackedRef = useRef(false);
+  useEffect(() => {
+    if (test.status === 'running' && !typingTrackedRef.current) {
+      typingTrackedRef.current = true;
+      track('play_typing', locale);
+    } else if (test.status === 'idle') {
+      typingTrackedRef.current = false;
+    }
+  }, [test.status, locale]);
 
   // 테스트 리셋(언어/시간 변경, 다시하기) 후 입력창 포커스
   useEffect(() => {

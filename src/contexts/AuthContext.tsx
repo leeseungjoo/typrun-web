@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { authApi, type AuthUser, type UpdateProfileForm, type SignupResult } from '../api/auth';
+import { track, trackOnce } from '../lib/track';
 
 interface AuthState {
   user: AuthUser | null;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const u = await authApi.me();
       setUser(u);
+      if (u) trackOnce('login', u.provider); // 퍼널 측정: 회원 세션(소셜/이메일 로그인) 1회 기록
     } catch {
       setUser(null);
     }
@@ -40,7 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signupEmail = useCallback(async (email: string, password: string, nickname: string, ref?: number) => {
     // 하드 정책: 인증 전이라 로그인(setUser) 하지 않고 결과만 반환
-    return await authApi.signupEmail({ email, password, nickname, ref });
+    const r = await authApi.signupEmail({ email, password, nickname, ref });
+    track('signup', 'email'); // 퍼널 측정: 이메일 가입 완료(인증 대기)
+    return r;
   }, []);
 
   const loginEmail = useCallback(async (email: string, password: string) => {

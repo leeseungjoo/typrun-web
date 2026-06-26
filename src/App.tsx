@@ -26,6 +26,7 @@ import LocaleSuggestBanner from './components/LocaleSuggestBanner';
 import SceneBackground from './components/SceneBackground';
 import MaintenanceGate from './components/MaintenanceGate';
 import { getAppStatus } from './api/status';
+import { trackOnce } from './lib/track';
 
 export default function App() {
   // 점검모드 조회 — ON 이면 게임 전체를 점검 화면으로 대체.
@@ -34,6 +35,11 @@ export default function App() {
     getAppStatus()
       .then((s) => setMaint({ on: s.maintenance, msg: s.maintenanceMessage }))
       .catch(() => setMaint({ on: false, msg: '' }));
+  }, []);
+
+  // 퍼널 측정: 세션당 1회 방문 기록(유입 출처 referrer 포함). 게스트 포함.
+  useEffect(() => {
+    trackOnce('visit');
   }, []);
 
   if (maint?.on) {

@@ -7,6 +7,7 @@ import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisualViewportBox } from '../hooks/useKeyboardInset';
+import { track } from '../lib/track';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -389,6 +390,15 @@ export default function GamePage() {
       },
     });
   }, [phase]);
+
+  // 퍼널 측정: 한 판 시작(playing 진입) 시 1회 기록(게스트 포함). 모드 구분 meta.
+  const playTrackedRef = useRef(false);
+  useEffect(() => {
+    if (phase === 'playing' && !playTrackedRef.current) {
+      playTrackedRef.current = true;
+      track('play_game', isPractice ? 'practice' : isSuperBeginner ? 'beginner' : 'ranking');
+    }
+  }, [phase, isPractice, isSuperBeginner]);
 
   // 플레이 중 브라우저 '뒤로가기' 가드 — 화면 안 '그만두기'와 동일하게 확인 후 이탈.
   // (HashRouter→BrowserRouter 컷오버로 백버튼이 실제 history를 pop → 확인 없이 튕기고

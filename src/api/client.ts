@@ -91,9 +91,9 @@ export const api = {
     return request<RankingsResponse>(`/rankings?${q.toString()}`);
   },
 
-  // 친구추천 랭킹 (event_seq 비우면 현재 활성 이벤트)
+  // 친구추천 랭킹 (event_seq 비우면 현재 활성 이벤트 — 사이트 언어에 맞는 것만)
   referralRankings(eventSeq?: number, limit = 50): Promise<ReferralRankingsResponse> {
-    const q = new URLSearchParams({ limit: String(limit) });
+    const q = new URLSearchParams({ limit: String(limit), lang: currentLang() });
     if (eventSeq) q.set('event_seq', String(eventSeq));
     return request<ReferralRankingsResponse>(`/referral_rankings?${q.toString()}`);
   },

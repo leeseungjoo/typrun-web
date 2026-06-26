@@ -7,6 +7,7 @@ import { api } from '../api/client';
 import { BattleSocket, type SocketState } from '../lib/battleSocket';
 import { type Mode, type PlayerInfo } from '../lib/battleProtocol';
 import BattleGame from '../components/battle/BattleGame';
+import { track } from '../lib/track';
 
 // 친구 초대 대결 — 사설 방 흐름.
 // create: 로그인 호스트가 방 생성 → 공유 링크 발급 → 친구 입장 대기.
@@ -63,6 +64,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
   const sockRef = useRef<BattleSocket | null>(null);
   const matchedRef = useRef(false);
   const startedRef = useRef(false); // match:cancelled 가 게임 시작 후 화면을 빼앗지 않도록(onMessage 클로저 stale 방지)
+  const openTrackedRef = useRef(false); // 퍼널 측정: 초대 입장 페이지 1회 기록 가드
 
   const [conn, setConn] = useState<SocketState>('connecting');
   const [shareCode, setShareCode] = useState<string | null>(null);
@@ -88,6 +90,14 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
   useEffect(() => {
     startedRef.current = started;
   }, [started]);
+
+  // 퍼널 측정: 초대 링크로 입장 페이지가 열리면 1회 기록(게스트=비회원 바이럴 유입 핵심 지표).
+  useEffect(() => {
+    if (pageMode === 'join' && !loading && !openTrackedRef.current) {
+      openTrackedRef.current = true;
+      track('battle_invite_open', user ? 'member' : 'guest');
+    }
+  }, [pageMode, loading, user]);
 
   // 생성 모드: 리그명 표시.
   useEffect(() => {
@@ -146,6 +156,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
         case 'room:created':
           setShareCode(msg.code);
           setWaiting({ have: msg.have, need: msg.need });
+          track('battle_create'); // 호스트가 초대방 생성
           break;
         case 'room:waiting':
           setWaiting({ have: msg.have, need: msg.need });
@@ -166,6 +177,7 @@ export default function InviteBattlePage({ mode: pageMode }: { mode: 'create' | 
             you: msg.you,
           });
           setErr(null);
+          track('battle_join', asGuest ? 'guest' : 'member'); // 대결 성사(게스트 여부 = 바이럴 핵심 지표)
           break;
         case 'match:start':
           setStarted(true);
