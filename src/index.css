@@ -69,14 +69,15 @@ body {
 /* ── 게임 타격감/연출 ───────────────────────────────── */
 @keyframes gamePunch { 0% { transform: scale(1); } 38% { transform: scale(1.03); } 100% { transform: scale(1); } }
 @keyframes crisisPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.95; } }
-@keyframes hitRing { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+/* 파편 가루 — 깬 자리에서 흩어져 아래로 흘러내리며 사라짐. CSS 컴포지터 애니(JS 0, 매 프레임 재조정 없음). */
+@keyframes dust { 0% { transform: translate(0,0) scale(1); opacity: 0.95; } 100% { transform: translate(var(--dx,0), var(--dy,0)) scale(0.35); opacity: 0; } }
 .crisis-vignette {
   background: radial-gradient(ellipse at center, transparent 46%, rgba(225,20,20,0.52) 100%);
   animation: crisisPulse 0.8s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .crisis-vignette { animation: none; opacity: 0.6; }
-  .hit-ring { animation: none !important; opacity: 0; }
+  .dust { animation: none !important; opacity: 0; }
 }
 
 /* 타자 테스트 본문 — 나눔고딕(한글/영문 공용) */

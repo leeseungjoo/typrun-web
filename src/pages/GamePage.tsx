@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -86,6 +86,51 @@ const BURST_ANGLES = Array.from({ length: 12 }, (_, i) => (i * Math.PI) / 6);
 function buzz(ms: number) {
   try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ }
 }
+
+// 파편 가루 레이어 — bursts 에만 의존하는 memo 컴포넌트. 게임의 매-프레임 리렌더(setActive)와 분리해
+// 단어 깰 때만 렌더되고, 파편은 CSS 컴포지터 애니로 흘러내림(JS/재조정 비용 0) → 랙 방지.
+const BurstLayer = memo(function BurstLayer({ bursts }: { bursts: { id: number; x: number; y: number; combo: number }[] }) {
+  return (
+    <>
+      {bursts.map((b) => {
+        const gold = b.combo >= 10;
+        const color = gold ? '#FFD24C' : '#A99CFF';
+        const glow = gold ? '0 0 5px rgba(255,200,0,.6)' : '0 0 4px rgba(150,130,255,.5)';
+        return (
+          <div
+            key={b.id}
+            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
+            style={{ left: `${b.x}%`, top: `${b.y}%` }}
+            aria-hidden
+          >
+            {BURST_ANGLES.map((ang, i) => {
+              const dist = 46 + (i % 4) * 14;
+              const dx = Math.cos(ang) * dist;
+              const dy = Math.sin(ang) * dist + 26; // 중력 — 아래로 흘러내림
+              return (
+                <span
+                  key={i}
+                  className="dust absolute block rounded-full"
+                  style={{
+                    width: 4,
+                    height: 4,
+                    left: -2,
+                    top: -2,
+                    background: color,
+                    boxShadow: glow,
+                    '--dx': `${dx.toFixed(1)}px`,
+                    '--dy': `${dy.toFixed(1)}px`,
+                    animation: `dust ${(0.6 + (i % 3) * 0.12).toFixed(2)}s ease-out forwards`,
+                  } as CSSProperties}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+    </>
+  );
+});
 
 export default function GamePage() {
   const { t } = useTranslation();
@@ -892,38 +937,8 @@ export default function GamePage() {
           );
         })}
 
-        {/* 타격감 — 깬 자리 히트 링(퍽 퍼짐) + 파편 12방향. 콤보 높으면 금빛. */}
-        {bursts.map((b) => {
-          const gold = b.combo >= 10;
-          const color = gold ? '#FFD24C' : '#A99CFF';
-          const glow = gold ? '0 0 10px rgba(255,200,0,.85)' : '0 0 8px rgba(150,130,255,.75)';
-          return (
-            <div
-              key={b.id}
-              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
-              style={{ left: `${b.x}%`, top: `${b.y}%` }}
-              aria-hidden
-            >
-              <span
-                className="hit-ring absolute block rounded-full"
-                style={{ width: 48, height: 48, left: -24, top: -24, border: `3px solid ${color}`, animation: 'hitRing 0.45s ease-out forwards' }}
-              />
-              {BURST_ANGLES.map((ang, i) => {
-                const dist = 58 + (i % 3) * 10;
-                return (
-                  <motion.span
-                    key={i}
-                    className="absolute block rounded-full"
-                    style={{ width: 9, height: 9, left: -4, top: -4, background: color, boxShadow: glow }}
-                    initial={{ x: 0, y: 0, opacity: 1, scale: 1.5 }}
-                    animate={{ x: Math.cos(ang) * dist, y: Math.sin(ang) * dist + 8, opacity: 0, scale: 0.2 }}
-                    transition={{ duration: 0.55, ease: 'easeOut' }}
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
+        {/* 타격감 — 깬 자리 파편 가루(흩어져 아래로 흘러내림). memo+CSS 라 매 프레임 비용 없음. */}
+        <BurstLayer bursts={bursts} />
 
         {/* 콤보 빠방 이펙트 */}
         <AnimatePresence>
