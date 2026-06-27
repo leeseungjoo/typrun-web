@@ -80,8 +80,8 @@ const COMBO_SPAWN_FACTOR = 2.0;
 let _wid = 0;
 const newId = () => ++_wid;
 
-// 타격감 — 단어 깰 때 사방으로 튀는 파편 8방향(고정각이라 결정적·가벼움).
-const BURST_ANGLES = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4, Math.PI, (5 * Math.PI) / 4, (3 * Math.PI) / 2, (7 * Math.PI) / 4];
+// 타격감 — 단어 깰 때 사방으로 튀는 파편 12방향(고정각이라 결정적·가벼움).
+const BURST_ANGLES = Array.from({ length: 12 }, (_, i) => (i * Math.PI) / 6);
 // 살짝의 진동(폰) — 데미지/콤보 마일스톤에만(매타 진동은 과함).
 function buzz(ms: number) {
   try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ }
@@ -104,6 +104,17 @@ export default function GamePage() {
   // 게임 중 이탈 — 점수 저장 안 됨 안내 후 이동
   const goWithConfirm = (path: string) => {
     if (window.confirm(t('game.quitConfirm'))) nav(path);
+  };
+
+  // 콤보 마일스톤 화면 펀치 — 게임 화면을 살짝 줌(타격감). reduced-motion 존중. 마일스톤만이라 reflow 부담 없음.
+  const punchRef = useRef<HTMLDivElement>(null);
+  const screenPunch = () => {
+    const el = punchRef.current;
+    if (!el) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    el.style.animation = 'none';
+    void el.offsetWidth; // 리플로우 → 애니메이션 재시작
+    el.style.animation = 'gamePunch 130ms ease-out';
   };
 
   const [words, setWords] = useState<Word[]>([]);
@@ -483,7 +494,8 @@ export default function GamePage() {
     sound.play('hit');
     if (nextCombo === 5 || nextCombo === 10 || nextCombo === 20) {
       sound.play('combo');
-      buzz(25); // 콤보 마일스톤 가벼운 진동(폰)
+      buzz(45); // 콤보 마일스톤 진동(폰)
+      screenPunch(); // 콤보 달성 시 화면 펀치(살짝 줌) — 타격감 절정
     }
 
     // 아이템 드롭
@@ -718,6 +730,7 @@ export default function GamePage() {
     // 보이는 시각 뷰포트에 딱 맞게 고정 — 키보드가 올라오면 그만큼 줄어들어 낙하 시작점(상단)·입력칸이 모두 화면 안.
     // visualViewport 미지원/데스크톱은 100dvh 풀스크린(동일 동작).
     <div
+      ref={punchRef}
       className="fixed inset-x-0 overflow-hidden"
       style={{ top: vvBox?.top ?? 0, height: vvBox ? vvBox.height : '100dvh' }}
       // 모바일 포커스 캐처: 화면 아무 데나 탭하면 입력칸 재포커스 → 키보드 닫혀도 제스처 내 focus 로 다시 올림(데스크톱은 무해).
@@ -879,33 +892,38 @@ export default function GamePage() {
           );
         })}
 
-        {/* 타격감 — 단어 깬 자리 파편 버스트(8방향, 콤보 높으면 금빛) */}
-        {bursts.map((b) => (
-          <div
-            key={b.id}
-            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
-            style={{ left: `${b.x}%`, top: `${b.y}%` }}
-            aria-hidden
-          >
-            {BURST_ANGLES.map((ang, i) => (
-              <motion.span
-                key={i}
+        {/* 타격감 — 깬 자리 히트 링(퍽 퍼짐) + 파편 12방향. 콤보 높으면 금빛. */}
+        {bursts.map((b) => {
+          const gold = b.combo >= 10;
+          const color = gold ? '#FFD24C' : '#A99CFF';
+          const glow = gold ? '0 0 10px rgba(255,200,0,.85)' : '0 0 8px rgba(150,130,255,.75)';
+          return (
+            <div
+              key={b.id}
+              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
+              style={{ left: `${b.x}%`, top: `${b.y}%` }}
+              aria-hidden
+            >
+              <span
                 className="absolute block rounded-full"
-                style={{
-                  width: 7,
-                  height: 7,
-                  left: 0,
-                  top: 0,
-                  background: b.combo >= 10 ? '#FFD24C' : '#A99CFF',
-                  boxShadow: b.combo >= 10 ? '0 0 8px rgba(255,200,0,.7)' : '0 0 6px rgba(150,130,255,.6)',
-                }}
-                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-                animate={{ x: Math.cos(ang) * 42, y: Math.sin(ang) * 42, opacity: 0, scale: 0.3 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                style={{ width: 48, height: 48, left: -24, top: -24, border: `3px solid ${color}`, animation: 'hitRing 0.45s ease-out forwards' }}
               />
-            ))}
-          </div>
-        ))}
+              {BURST_ANGLES.map((ang, i) => {
+                const dist = 58 + (i % 3) * 10;
+                return (
+                  <motion.span
+                    key={i}
+                    className="absolute block rounded-full"
+                    style={{ width: 9, height: 9, left: -4, top: -4, background: color, boxShadow: glow }}
+                    initial={{ x: 0, y: 0, opacity: 1, scale: 1.5 }}
+                    animate={{ x: Math.cos(ang) * dist, y: Math.sin(ang) * dist + 8, opacity: 0, scale: 0.2 }}
+                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
 
         {/* 콤보 빠방 이펙트 */}
         <AnimatePresence>
@@ -955,6 +973,22 @@ export default function GamePage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* 콤보 글로우 — 콤보 높을수록 화면 가장자리 발광(15+면 금빛). opacity 트랜지션이라 가벼움. */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{
+          background:
+            combo >= 15
+              ? 'radial-gradient(ellipse at center, transparent 52%, rgba(255,170,40,0.30) 100%)'
+              : 'radial-gradient(ellipse at center, transparent 52%, rgba(140,110,255,0.26) 100%)',
+          opacity: Math.min(Math.max(combo - 4, 0) / 14, 1),
+          transition: 'opacity 220ms ease-out',
+        }}
+        aria-hidden
+      />
+      {/* 위기 비네트 — HP 낮으면 빨강 가장자리 심박(reduced-motion 시 정적) */}
+      {hp <= 2 && hp > 0 && <div className="absolute inset-0 pointer-events-none z-10 crisis-vignette" aria-hidden />}
 
       {/* 하단 컨트롤 — 화면 하단 오버레이 (단어는 이 뒤로 떨어져 화면 밖에서 미스) */}
       <div className="absolute bottom-0 inset-x-0 z-20">
