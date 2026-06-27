@@ -80,6 +80,13 @@ const COMBO_SPAWN_FACTOR = 2.0;
 let _wid = 0;
 const newId = () => ++_wid;
 
+// 타격감 — 단어 깰 때 사방으로 튀는 파편 8방향(고정각이라 결정적·가벼움).
+const BURST_ANGLES = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4, Math.PI, (5 * Math.PI) / 4, (3 * Math.PI) / 2, (7 * Math.PI) / 4];
+// 살짝의 진동(폰) — 데미지/콤보 마일스톤에만(매타 진동은 과함).
+function buzz(ms: number) {
+  try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ }
+}
+
 export default function GamePage() {
   const { t } = useTranslation();
   const { categorySeq } = useParams();
@@ -119,6 +126,8 @@ export default function GamePage() {
   const [lastHit, setLastHit] = useState<{ id: number; word: Word } | null>(null);
   const [comboFx, setComboFx] = useState<{ id: number; combo: number } | null>(null);
   const [popups, setPopups] = useState<ScorePopup[]>([]);
+  // 타격감 파편 버스트 — 단어 깬 자리(x,y%)에서 사방으로 터짐. ~0.6s 후 자동 제거.
+  const [bursts, setBursts] = useState<{ id: number; x: number; y: number; combo: number }[]>([]);
   const [muted, setMuted] = useState(sound.isMuted());
   const [inventory, setInventory] = useState<(InventoryItem | null)[]>(() =>
     Array<InventoryItem | null>(MAX_INVENTORY).fill(null),
@@ -315,7 +324,10 @@ export default function GamePage() {
           const absorbed = Math.min(shieldsLeft, bottomHits);
           const damage = bottomHits - absorbed;
           if (absorbed > 0) setShields((s) => Math.max(0, s - absorbed));
-          if (damage > 0) setHp((h) => Math.max(0, h - damage));
+          if (damage > 0) {
+            setHp((h) => Math.max(0, h - damage));
+            buzz(70); // 데미지 시 진동(폰) — 위기 체감
+          }
           setMiss((m) => m + bottomHits);
           setCombo(0);
           sound.play('miss');
@@ -462,10 +474,16 @@ export default function GamePage() {
       setPopups((prev) => prev.filter((p) => p.id !== popupId));
     }, meaning ? 1800 : 1000);
 
+    // 타격감 — 깬 자리에 파편 버스트(콤보 높으면 금빛). 0.6s 후 정리.
+    const burstId = newId();
+    setBursts((prev) => [...prev, { id: burstId, x: hit.x, y: hit.y, combo: nextCombo }]);
+    setTimeout(() => setBursts((prev) => prev.filter((b) => b.id !== burstId)), 600);
+
     // 사운드: 매 정답 hit, 콤보 마일스톤(5/10/20)에는 combo도 추가
     sound.play('hit');
     if (nextCombo === 5 || nextCombo === 10 || nextCombo === 20) {
       sound.play('combo');
+      buzz(25); // 콤보 마일스톤 가벼운 진동(폰)
     }
 
     // 아이템 드롭
@@ -860,6 +878,34 @@ export default function GamePage() {
             </motion.div>
           );
         })}
+
+        {/* 타격감 — 단어 깬 자리 파편 버스트(8방향, 콤보 높으면 금빛) */}
+        {bursts.map((b) => (
+          <div
+            key={b.id}
+            className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
+            style={{ left: `${b.x}%`, top: `${b.y}%` }}
+            aria-hidden
+          >
+            {BURST_ANGLES.map((ang, i) => (
+              <motion.span
+                key={i}
+                className="absolute block rounded-full"
+                style={{
+                  width: 7,
+                  height: 7,
+                  left: 0,
+                  top: 0,
+                  background: b.combo >= 10 ? '#FFD24C' : '#A99CFF',
+                  boxShadow: b.combo >= 10 ? '0 0 8px rgba(255,200,0,.7)' : '0 0 6px rgba(150,130,255,.6)',
+                }}
+                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                animate={{ x: Math.cos(ang) * 42, y: Math.sin(ang) * 42, opacity: 0, scale: 0.3 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            ))}
+          </div>
+        ))}
 
         {/* 콤보 빠방 이펙트 */}
         <AnimatePresence>
