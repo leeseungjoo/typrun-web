@@ -905,7 +905,7 @@ export default function GamePage() {
               aria-hidden
             >
               <span
-                className="absolute block rounded-full"
+                className="hit-ring absolute block rounded-full"
                 style={{ width: 48, height: 48, left: -24, top: -24, border: `3px solid ${color}`, animation: 'hitRing 0.45s ease-out forwards' }}
               />
               {BURST_ANGLES.map((ang, i) => {

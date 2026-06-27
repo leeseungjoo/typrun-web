@@ -76,6 +76,7 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .crisis-vignette { animation: none; opacity: 0.6; }
+  .hit-ring { animation: none !important; opacity: 0; }
 }
 
 /* 타자 테스트 본문 — 나눔고딕(한글/영문 공용) */
