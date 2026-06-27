@@ -80,8 +80,8 @@ const COMBO_SPAWN_FACTOR = 2.0;
 let _wid = 0;
 const newId = () => ++_wid;
 
-// 타격감 — 단어 깰 때 사방으로 튀는 파편 12방향(고정각이라 결정적·가벼움).
-const BURST_ANGLES = Array.from({ length: 12 }, (_, i) => (i * Math.PI) / 6);
+// 타격감 — 단어 깰 때 사방으로 튀는 파편 18방향(고정각이라 결정적·가벼움). CSS 라 수량 늘려도 랙 없음.
+const BURST_ANGLES = Array.from({ length: 18 }, (_, i) => (i * Math.PI) / 9);
 // 살짝의 진동(폰) — 데미지/콤보 마일스톤에만(매타 진동은 과함).
 function buzz(ms: number) {
   try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ }
@@ -104,23 +104,24 @@ const BurstLayer = memo(function BurstLayer({ bursts }: { bursts: { id: number; 
             aria-hidden
           >
             {BURST_ANGLES.map((ang, i) => {
-              const dist = 46 + (i % 4) * 14;
+              const sz = 5 + (i % 3) * 2; // 5/7/9px 변주 — 더 큰 가루
+              const dist = 66 + (i % 5) * 22; // 66~154px — 더 넓게 흩어짐
               const dx = Math.cos(ang) * dist;
-              const dy = Math.sin(ang) * dist + 26; // 중력 — 아래로 흘러내림
+              const dy = Math.sin(ang) * dist + 34; // 중력 — 더 멀리 아래로 흘러내림
               return (
                 <span
                   key={i}
                   className="dust absolute block rounded-full"
                   style={{
-                    width: 4,
-                    height: 4,
-                    left: -2,
-                    top: -2,
+                    width: sz,
+                    height: sz,
+                    left: -(sz / 2),
+                    top: -(sz / 2),
                     background: color,
                     boxShadow: glow,
                     '--dx': `${dx.toFixed(1)}px`,
                     '--dy': `${dy.toFixed(1)}px`,
-                    animation: `dust ${(0.6 + (i % 3) * 0.12).toFixed(2)}s ease-out forwards`,
+                    animation: `dust ${(0.7 + (i % 3) * 0.14).toFixed(2)}s ease-out forwards`,
                   } as CSSProperties}
                 />
               );
