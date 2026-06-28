@@ -59,6 +59,10 @@ export default function MainPage() {
             {t('main.typingTest')}{' '}
             <span className="text-black/55 text-sm font-bold align-middle">{t('main.speedTest')}</span>
           </button>
+          <button className="line-btn py-4 text-lg" onClick={() => nav('/race')}>
+            {t('main.race')}{' '}
+            <span className="text-white/45 text-sm font-bold align-middle">{t('main.raceSub')}</span>
+          </button>
           <button className="cta-btn" onClick={() => nav('/league')}>
             {t('main.startGame')}
           </button>

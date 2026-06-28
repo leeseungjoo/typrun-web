@@ -1,6 +1,6 @@
 // 타자 테스트(monkeytype식) — 깔끔/즉시시작/무로그인. locale-aware(한글 타수 · 영문 WPM).
 // UI 문자열은 i18n(t), 콘텐츠 언어(한글/English) 토글은 별개. 콘텐츠 기본값은 UI 언어를 따른다.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -9,40 +9,12 @@ import { track } from '../lib/track';
 import { useAuth } from '../contexts/AuthContext';
 import { typingApi, type TypingSaveResponse } from '../api/typing';
 import Segmented from '../components/typing/Segmented';
+import TypeStream from '../components/typing/TypeStream';
 import type { TestLocale, TestResult } from '../lib/typingTest/score';
 
 type SaveState = { saving: boolean; res?: TypingSaveResponse; err?: string };
 
 const DURATIONS = [15, 30, 60];
-const WINDOW_BACK = 6;
-const WINDOW_SIZE = 48;
-
-type WordState = 'done' | 'current' | 'todo';
-
-function renderWord(target: string, typed: string, state: WordState): ReactNode {
-  const len = Math.max(target.length, typed.length);
-  const out: ReactNode[] = [];
-  for (let j = 0; j < len; j++) {
-    if (state === 'current' && j === typed.length) {
-      out.push(<span key={`c${j}`} className="tt-caret" aria-hidden />);
-    }
-    const tc = target[j];
-    const yc = typed[j];
-    let cls = 'text-white/25';
-    let ch = tc ?? yc ?? '';
-    if (yc !== undefined && tc !== undefined) {
-      cls = yc === tc ? 'text-white' : 'text-red-400';
-    } else if (yc !== undefined && tc === undefined) {
-      cls = 'text-red-400/60';
-      ch = yc;
-    }
-    out.push(<span key={j} className={cls}>{ch}</span>);
-  }
-  if (state === 'current' && typed.length >= len) {
-    out.push(<span key="end" className="tt-caret" aria-hidden />);
-  }
-  return out;
-}
 
 export default function TypingTestPage() {
   const nav = useNavigate();
@@ -51,10 +23,6 @@ export default function TypingTestPage() {
   const [duration, setDuration] = useState(30);
   const [focused, setFocused] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
-  // 단일 라인 가로 스크롤(타자기식) — 현재 단어를 고정 위치에 두고 텍스트가 왼쪽으로 흐른다(줄바꿈 대신).
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const currentWordRef = useRef<HTMLSpanElement>(null);
-  const [scrollX, setScrollX] = useState(0);
 
   const test = useTypingTest(locale, duration);
   const { user } = useAuth();
@@ -116,24 +84,6 @@ export default function TypingTestPage() {
     test.onKeyDown(e);
   };
 
-  const start = Math.max(0, test.wordIndex - WINDOW_BACK);
-  const visible = test.words.slice(start, start + WINDOW_SIZE);
-
-  // 현재 단어를 뷰포트 32% 지점에 고정 → 진행할수록 텍스트가 왼쪽으로 흐른다(앞쪽은 0으로 클램프해 좌측정렬 유지).
-  const recenter = useCallback(() => {
-    const vp = viewportRef.current;
-    const cw = currentWordRef.current;
-    if (!vp || !cw) return;
-    setScrollX(Math.min(0, vp.clientWidth * 0.32 - cw.offsetLeft));
-  }, []);
-  useLayoutEffect(() => {
-    recenter();
-  }, [recenter, test.wordIndex, start, locale, duration, focused, test.status, test.words]);
-  useEffect(() => {
-    window.addEventListener('resize', recenter);
-    return () => window.removeEventListener('resize', recenter);
-  }, [recenter]);
-
   // 모바일: 세로 중앙정렬하면 단어가 화면 한가운데→키보드에 가림. 상단정렬로 올려 키보드 위에 둔다. md+는 기존 중앙.
   return (
     <div className="min-h-screen flex flex-col items-center justify-start md:justify-center px-6 pt-20 pb-12 md:py-12">
@@ -191,41 +141,19 @@ export default function TypingTestPage() {
             </div>
           </div>
 
-          {/* 단어 영역 — 단일 라인 가로 스크롤(타자기식). 줄바꿈 대신 현재 단어가 고정 위치에 머물고 텍스트가 왼쪽으로 흐른다. */}
+          {/* 단어 영역 — 단일 라인 가로 스크롤(타자기식). 공용 TypeStream 사용. */}
           <div
             className="relative w-full max-w-4xl cursor-text"
             onClick={focusInput}
           >
-            <div ref={viewportRef} className="overflow-hidden py-1">
-              <div
-                className={`whitespace-nowrap text-2xl md:text-3xl font-bold tracking-wide tt-text select-none will-change-transform ${
-                  focused ? '' : 'blur-[3px] opacity-60'
-                }`}
-                style={{ transform: `translateX(${scrollX}px)`, transition: 'transform 160ms ease-out' }}
-                lang={locale}
-              >
-                {visible.map((w, k) => {
-                  const gi = start + k;
-                  const state: WordState =
-                    gi < test.wordIndex ? 'done' : gi === test.wordIndex ? 'current' : 'todo';
-                  const typed =
-                    gi < test.wordIndex
-                      ? test.typedWords[gi] ?? ''
-                      : gi === test.wordIndex
-                      ? test.current
-                      : '';
-                  return (
-                    <span
-                      key={gi}
-                      ref={gi === test.wordIndex ? currentWordRef : undefined}
-                      className="inline-block mr-3"
-                    >
-                      {renderWord(w, typed, state)}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
+            <TypeStream
+              words={test.words}
+              wordIndex={test.wordIndex}
+              current={test.current}
+              typedWords={test.typedWords}
+              locale={locale}
+              focused={focused}
+            />
 
             {!focused && (
               <div className="absolute inset-0 flex items-center justify-center">

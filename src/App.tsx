@@ -10,6 +10,7 @@ import InviteBattlePage from './pages/InviteBattlePage';
 import GamePage from './pages/GamePage';
 import GameOverPage from './pages/GameOverPage';
 import TypingTestPage from './pages/TypingTestPage';
+import RacePage from './pages/RacePage';
 import TypingStatsPage from './pages/TypingStatsPage';
 import TypingLeaderboardPage from './pages/TypingLeaderboardPage';
 import RankingsPage from './pages/RankingsPage';
@@ -65,6 +66,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/test" element={<TypingTestPage />} />
+        <Route path="/race" element={<RacePage />} />
         <Route path="/test/stats" element={<TypingStatsPage />} />
         <Route path="/test/leaderboard" element={<TypingLeaderboardPage />} />
         <Route path="/login" element={<LoginPage />} />
