@@ -8,6 +8,7 @@ import LeagueDetailPage from './pages/LeagueDetailPage';
 import BattleLobbyPage from './pages/BattleLobbyPage';
 import InviteBattlePage from './pages/InviteBattlePage';
 import GamePage from './pages/GamePage';
+import TapRunnerPage from './pages/TapRunnerPage';
 import GameOverPage from './pages/GameOverPage';
 import TypingTestPage from './pages/TypingTestPage';
 import RacePage from './pages/RacePage';
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/battle/invite/new/:categorySeq" element={<InviteBattlePage mode="create" />} />
         <Route path="/battle/invite/:code" element={<InviteBattlePage mode="join" />} />
         <Route path="/game/:categorySeq" element={<GamePage />} />
+        <Route path="/tap" element={<TapRunnerPage />} />
         <Route path="/game-over" element={<GameOverPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/rankings/:categorySeq" element={<RankingsPage />} />

@@ -18,6 +18,10 @@ export default function MainPage() {
   const [season, setSeason] = useState<Season | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const { user, loading } = useAuth();
+  // 터치 기기(폰·태블릿)에만 탭 러너 진입 노출 — 데스크톱 메뉴는 3버튼 유지
+  const [isTouch] = useState(
+    () => (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ?? false,
+  );
 
   useEffect(() => {
     api.currentSeason().then(setSeason).catch(console.error);
@@ -88,6 +92,12 @@ export default function MainPage() {
           <button className="cta-btn" onClick={() => nav('/league')}>
             {t('main.startGame')}
           </button>
+          {isTouch && (
+            <button className="line-btn py-4 text-lg" onClick={() => nav('/tap')}>
+              {t('main.tapRunner')}{' '}
+              <span className="text-white/45 text-sm font-bold align-middle">β</span>
+            </button>
+          )}
           <button className="line-btn py-4 text-lg" onClick={() => nav('/rankings')}>
             {t('main.ranking')}
           </button>
