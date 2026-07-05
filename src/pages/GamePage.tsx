@@ -7,6 +7,7 @@ import { sound } from '../lib/sound';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisualViewportBox } from '../hooks/useKeyboardInset';
+import RunnerScene from '../components/game/RunnerScene';
 import { track } from '../lib/track';
 import type { Word, Category } from '../api/types';
 import {
@@ -771,6 +772,8 @@ export default function GamePage() {
   // playing
   const timeLeft = Math.max(0, Math.ceil(gameDuration + bonusTime - elapsed));
   const comboMul = combo > 0 ? combo * tierFactor(combo) : 0;
+  // 입력 중인 접두와 일치하는 단어 글자를 금색 하이라이트 (표시만 — 판정은 기존 Enter 매칭 그대로)
+  const typedQ = input.trim().toLowerCase();
 
   return (
     // 보이는 시각 뷰포트에 딱 맞게 고정 — 키보드가 올라오면 그만큼 줄어들어 낙하 시작점(상단)·입력칸이 모두 화면 안.
@@ -838,6 +841,8 @@ export default function GamePage() {
 
       {/* PlayField — 화면 전체, 단어가 끝까지 떨어져 화면 밖에서 죽음 */}
       <div className="absolute inset-0">
+        {/* 러너 씬 — 판정 무관 그림 레이어(캔버스). 정답/미스/HP 를 읽기만 함 */}
+        <RunnerScene hp={hp} maxHp={MAX_HP} correct={correct} miss={miss} />
         {/* 활성 효과 배너 (상단 중앙) */}
         {effects.length > 0 && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none">
@@ -893,15 +898,23 @@ export default function GamePage() {
                   ?
                 </motion.div>
               )}
-              <div
-                className={`px-4 py-2 rounded-lg backdrop-blur border ${
-                  a.item
-                    ? 'bg-yellow-400/10 border-yellow-400/60 shadow-[0_0_20px_rgba(250,200,0,0.3)]'
-                    : 'bg-white/10 border-white/20'
-                }`}
-              >
-                <div className="text-3xl font-bold">{a.word.word}</div>
-              </div>
+              {(() => {
+                // 게임형 아웃라인 텍스트 — 입력과 일치하는 접두는 금색으로 실시간 표시(표시만, 판정 무관)
+                const typedLen =
+                  typedQ && a.word.word.toLowerCase().startsWith(typedQ) ? typedQ.length : 0;
+                return (
+                  <div className={`game-word ${a.item ? 'game-word-item' : ''}`}>
+                    {typedLen > 0 ? (
+                      <>
+                        <span className="game-word-hit">{a.word.word.slice(0, typedLen)}</span>
+                        {a.word.word.slice(typedLen)}
+                      </>
+                    ) : (
+                      a.word.word
+                    )}
+                  </div>
+                );
+              })()}
             </motion.div>
           ))}
         </AnimatePresence>

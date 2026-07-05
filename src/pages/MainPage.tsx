@@ -59,10 +59,7 @@ export default function MainPage() {
             {t('main.typingTest')}{' '}
             <span className="text-black/55 text-sm font-bold align-middle">{t('main.speedTest')}</span>
           </button>
-          <button className="line-btn py-4 text-lg" onClick={() => nav('/race')}>
-            {t('main.race')}{' '}
-            <span className="text-white/45 text-sm font-bold align-middle">{t('main.raceSub')}</span>
-          </button>
+          {/* 타자레이스 — 속도측정과 중복·게임성 낮음으로 메뉴에서 숨김(2026-07-05, 라우트 /race 는 유지) */}
           <button className="cta-btn" onClick={() => nav('/league')}>
             {t('main.startGame')}
           </button>
