@@ -2,13 +2,14 @@
 // 기존 게임 상태(correct/miss/hp)를 읽기만 해서: 정답=점프+가속 누적, 미스=넘어짐+감속 리셋,
 // HP=몬스터와의 거리로 시각화한다. 손맛 수치는 TAJA RUN에서 추출한 공식(수치만 이식, 에셋 무관).
 import { memo, useEffect, useRef } from 'react';
-import { getRunnerSprites } from './runnerAssets';
+import { getRunnerSprites, type RunnerSkin } from './runnerAssets';
 
 interface RunnerSceneProps {
   hp: number;
   maxHp: number;
   correct: number; // 누적 정답 수 — 증가 감지 시 점프+부스트
   miss: number;    // 누적 미스 수 — 증가 감지 시 넘어짐+속도 리셋
+  skin?: RunnerSkin; // 러너 의상 (회원 보상) — 기본 classic
 }
 
 // ★ TAJA RUN 손맛 공식 — 속도 = 기울기×경과 + 3(상한), 정답 = 경과 +2초(영구 가속), 미스 = 커브 재시작
@@ -23,7 +24,7 @@ const BOTTOM_RESERVED = 300; // 하단 컨트롤(인벤토리·입력줄)에 안
 
 interface DustP { x: number; y: number; vx: number; vy: number; life: number }
 
-export default memo(function RunnerScene({ hp, maxHp, correct, miss }: RunnerSceneProps) {
+export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'classic' }: RunnerSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 게임 상태는 ref 로만 소비 — 씬 자체는 리렌더 없이 rAF 로 돈다
   const hpRef = useRef(hp);
@@ -62,7 +63,7 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss }: RunnerSce
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const spr = getRunnerSprites();
+    const spr = getRunnerSprites(skin);
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     startTimeRef.current = performance.now();
@@ -205,7 +206,7 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss }: RunnerSce
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, []);
+  }, [skin]);
 
   return (
     <canvas

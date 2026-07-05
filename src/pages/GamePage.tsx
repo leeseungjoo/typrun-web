@@ -8,6 +8,7 @@ import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisualViewportBox } from '../hooks/useKeyboardInset';
 import RunnerScene from '../components/game/RunnerScene';
+import { getStoredSkin } from '../components/game/runnerAssets';
 import { track } from '../lib/track';
 import type { Word, Category } from '../api/types';
 import {
@@ -841,8 +842,8 @@ export default function GamePage() {
 
       {/* PlayField — 화면 전체, 단어가 끝까지 떨어져 화면 밖에서 죽음 */}
       <div className="absolute inset-0">
-        {/* 러너 씬 — 판정 무관 그림 레이어(캔버스). 정답/미스/HP 를 읽기만 함 */}
-        <RunnerScene hp={hp} maxHp={MAX_HP} correct={correct} miss={miss} />
+        {/* 러너 씬 — 판정 무관 그림 레이어(캔버스). 정답/미스/HP 를 읽기만 함. 스킨은 회원 보상 */}
+        <RunnerScene hp={hp} maxHp={MAX_HP} correct={correct} miss={miss} skin={user ? getStoredSkin() : 'classic'} />
         {/* 활성 효과 배너 (상단 중앙) */}
         {effects.length > 0 && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none">

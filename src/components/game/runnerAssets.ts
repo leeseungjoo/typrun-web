@@ -75,7 +75,36 @@ const MON = [
   '.MM..MM..MM.',
 ];
 
-function bake(map: string[]): HTMLCanvasElement {
+// ── 러너 스킨 — 팔레트 오버라이드만으로 만드는 의상 변형 (회원 보상용, 추가 에셋 비용 0) ──
+export type RunnerSkin = 'classic' | 'gold' | 'mint' | 'pink' | 'shadow';
+export const RUNNER_SKIN_IDS: RunnerSkin[] = ['classic', 'gold', 'mint', 'pink', 'shadow'];
+const SKIN_OVERRIDES: Record<RunnerSkin, Record<string, string>> = {
+  classic: {},
+  gold: { B: '#ffd24c', R: '#a97f12' },
+  mint: { B: '#3ddc97', R: '#0f8a5f' },
+  pink: { B: '#ff7ab8', R: '#c2255c' },
+  shadow: { B: '#3b3358', R: '#a99cff', H: '#14162a' },
+};
+
+const SKIN_STORAGE_KEY = 'typrun_runner_skin';
+export function getStoredSkin(): RunnerSkin {
+  try {
+    const v = localStorage.getItem(SKIN_STORAGE_KEY);
+    if (v && (RUNNER_SKIN_IDS as string[]).includes(v)) return v as RunnerSkin;
+  } catch {
+    /* localStorage 접근 불가 환경은 기본 스킨 */
+  }
+  return 'classic';
+}
+export function setStoredSkin(skin: RunnerSkin): void {
+  try {
+    localStorage.setItem(SKIN_STORAGE_KEY, skin);
+  } catch {
+    /* ignore */
+  }
+}
+
+function bake(map: string[], overrides: Record<string, string> = {}): HTMLCanvasElement {
   const w = map[0].length;
   const h = map.length;
   const c = document.createElement('canvas');
@@ -86,7 +115,7 @@ function bake(map: string[]): HTMLCanvasElement {
     for (let x = 0; x < w; x++) {
       const ch = map[y][x];
       if (ch === '.') continue;
-      g.fillStyle = PAL[ch] ?? '#fff';
+      g.fillStyle = overrides[ch] ?? PAL[ch] ?? '#fff';
       g.fillRect(x, y, 1, 1);
     }
   }
@@ -170,20 +199,29 @@ export interface RunnerSprites {
   ground: HTMLCanvasElement;
 }
 
-let cached: RunnerSprites | null = null;
+// 배경/몬스터는 스킨 무관 공유, 러너 프레임만 스킨별 캐시
+let shared: Pick<RunnerSprites, 'mon' | 'skyline' | 'hills' | 'ground'> | null = null;
+const skinCache = new Map<RunnerSkin, RunnerSprites>();
 
-/** 스프라이트/패턴 1회 베이크 (모듈 싱글턴 — 게임 재입장에도 재사용) */
-export function getRunnerSprites(): RunnerSprites {
-  if (!cached) {
-    cached = {
-      run1: bake(RUN1),
-      run2: bake(RUN2),
-      jump: bake(JUMP),
+/** 스프라이트/패턴 베이크 (스킨별 1회 — 게임 재입장에도 재사용) */
+export function getRunnerSprites(skin: RunnerSkin = 'classic'): RunnerSprites {
+  const hit = skinCache.get(skin);
+  if (hit) return hit;
+  if (!shared) {
+    shared = {
       mon: bake(MON),
       skyline: makeSkyline(),
       hills: makeHills(),
       ground: makeGround(),
     };
   }
-  return cached;
+  const ov = SKIN_OVERRIDES[skin];
+  const built: RunnerSprites = {
+    run1: bake(RUN1, ov),
+    run2: bake(RUN2, ov),
+    jump: bake(JUMP, ov),
+    ...shared,
+  };
+  skinCache.set(skin, built);
+  return built;
 }

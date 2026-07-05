@@ -7,9 +7,39 @@ import { isSyntheticEmail, containsProfanity, pickProfileImage, authApi } from '
 import { api } from '../api/client';
 import { resizeImage } from '../lib/imageResize';
 import InviteLink from '../components/InviteLink';
+import {
+  RUNNER_SKIN_IDS,
+  getRunnerSprites,
+  getStoredSkin,
+  setStoredSkin,
+  type RunnerSkin,
+} from '../components/game/runnerAssets';
 import type { ScoreHistoryEntry, BattleRecordStats } from '../api/types';
 
 const BIO_MAX = 200;
+
+// 러너 스킨 미리보기 — 스프라이트(12x14)를 3배 확대해 그림
+function SkinPreview({ skin }: { skin: RunnerSkin }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, c.width, c.height);
+    g.drawImage(getRunnerSprites(skin).run1, 0, 0, c.width, c.height);
+  }, [skin]);
+  return (
+    <canvas
+      ref={ref}
+      width={36}
+      height={42}
+      style={{ imageRendering: 'pixelated' }}
+      aria-hidden
+    />
+  );
+}
 
 export default function ProfilePage() {
   const nav = useNavigate();
@@ -27,6 +57,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<ScoreHistoryEntry[] | null>(null);
   const [battleStats, setBattleStats] = useState<BattleRecordStats | null>(null); // null=미집계/엔드포인트 미배포 → 베타 표기
+  const [skin, setSkin] = useState<RunnerSkin>(() => getStoredSkin()); // 러너 스킨 (회원 보상)
   // 비밀번호 변경
   const [curPw, setCurPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -268,6 +299,38 @@ export default function ProfilePage() {
         className="mb-4"
       >
         <InviteLink />
+      </motion.div>
+
+      {/* 캐릭터 스킨 카드 — 회원 보상 (선택은 브라우저 저장, 게임 러너 씬에 즉시 적용) */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.04 }}
+        className="card mb-4"
+      >
+        <div className="text-sm font-bold mb-1">{t('profile.skinTitle')}</div>
+        <p className="text-xs text-white/50 mb-3">{t('profile.skinDesc')}</p>
+        <div className="flex flex-wrap gap-2">
+          {RUNNER_SKIN_IDS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => {
+                setStoredSkin(s);
+                setSkin(s);
+              }}
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition ${
+                skin === s
+                  ? 'bg-white/15 border-accent'
+                  : 'bg-white/5 border-white/15 hover:bg-white/10'
+              }`}
+              aria-pressed={skin === s}
+            >
+              <SkinPreview skin={s} />
+              <span className="text-[11px] text-white/70">{t(`profile.skin_${s}`)}</span>
+            </button>
+          ))}
+        </div>
       </motion.div>
 
       {/* 합성 이메일 경고 */}
