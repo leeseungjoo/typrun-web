@@ -80,34 +80,6 @@ body {
   .dust { animation: none !important; opacity: 0; }
 }
 
-/* 러너 씬 단어 — 알약 박스 대신 게임형 아웃라인 텍스트(패럴랙스 배경 위 가독성은 8방향 외곽선이 담당) */
-.game-word {
-  font-size: 1.875rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #fff;
-  white-space: nowrap;
-  text-shadow:
-    2px 0 0 #0c0e1e, -2px 0 0 #0c0e1e, 0 2px 0 #0c0e1e, 0 -2px 0 #0c0e1e,
-    2px 2px 0 #0c0e1e, -2px 2px 0 #0c0e1e, 2px -2px 0 #0c0e1e, -2px -2px 0 #0c0e1e,
-    0 0 14px rgba(169, 156, 255, 0.3);
-}
-/* 아이템 부착 단어 — 금빛 발광 추가 */
-.game-word-item {
-  text-shadow:
-    2px 0 0 #0c0e1e, -2px 0 0 #0c0e1e, 0 2px 0 #0c0e1e, 0 -2px 0 #0c0e1e,
-    2px 2px 0 #0c0e1e, -2px 2px 0 #0c0e1e, 2px -2px 0 #0c0e1e, -2px -2px 0 #0c0e1e,
-    0 0 20px rgba(250, 200, 0, 0.55);
-}
-/* 입력 중 접두 일치 글자 — 금색 하이라이트 (타격감 핵심) */
-.game-word-hit {
-  color: #ffd24c;
-  text-shadow:
-    2px 0 0 #3a2b00, -2px 0 0 #3a2b00, 0 2px 0 #3a2b00, 0 -2px 0 #3a2b00,
-    2px 2px 0 #3a2b00, -2px 2px 0 #3a2b00, 2px -2px 0 #3a2b00, -2px -2px 0 #3a2b00,
-    0 0 16px rgba(255, 210, 76, 0.8);
-}
-
 /* 타자 테스트 본문 — 나눔고딕(한글/영문 공용) */
 .tt-text {
   font-family: 'Nanum Gothic', 'Pretendard', system-ui, sans-serif;
