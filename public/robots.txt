@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /profile
+Disallow: /battle/
+Disallow: /game/
+Disallow: /draw/
+
+Sitemap: https://typrun.com/sitemap.xml
