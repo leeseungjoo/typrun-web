@@ -1,11 +1,30 @@
 User-agent: *
 Allow: /
+
+# 개인·세션 페이지는 색인 대상이 아니다 (크롤 예산 낭비 방지).
+# KR 트리(/kr/*)도 같이 막아야 한다 — 접두 매칭이라 /login 규칙이 /kr/login 을 막지 못한다.
 Disallow: /login
+Disallow: /kr/login
 Disallow: /forgot-password
+Disallow: /kr/forgot-password
 Disallow: /reset-password
+Disallow: /kr/reset-password
 Disallow: /profile
-Disallow: /battle/
-Disallow: /game/
+Disallow: /kr/profile
 Disallow: /draw/
+Disallow: /kr/draw/
+Disallow: /battle/
+Disallow: /kr/battle/
+Disallow: /game/
+Disallow: /kr/game/
+Disallow: /game-over
+Disallow: /kr/game-over
+
+# 초대·추천 파라미터가 붙은 URL 은 본문이 같은 중복 문서다.
+Disallow: /*?invite=
+Disallow: /*?ref=
+
+# 주의: robots.txt 는 "가장 구체적인 User-agent 그룹만" 적용된다.
+# `User-agent: Yeti` 그룹을 따로 만들면 Yeti 가 위 Disallow 를 전부 무시하므로 만들지 않는다.
 
 Sitemap: https://typrun.com/sitemap.xml
