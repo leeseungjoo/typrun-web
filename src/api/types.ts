@@ -65,6 +65,13 @@ export interface WordsResponse {
 }
 
 // 점수 저장 응답
+// 게임오버 CTA — 비회원 점수가 로그인 시 들어갈 순위(rank_preview)
+export interface RankPreview {
+  mode: 'season' | 'event';
+  category_seq: number;
+  rank_no: number;      // 1 + 이 점수보다 높은 회원 수
+  ranked_count: number; // 현재 랭킹에 있는 회원 수
+}
 export interface ScoreSaveResponse {
   season_seq: number;
   rank_no: number;

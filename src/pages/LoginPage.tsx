@@ -4,10 +4,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../api/auth';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
-
-type Provider = 'google' | 'kakao' | 'naver';
+import { SOCIAL_PROVIDERS, startSocialLogin, type SocialProvider as Provider } from '../lib/socialLogin';
 
 const AUTH_ERROR_KEYS: Record<string, string> = {
   no_code: 'auth.errNoCode',
@@ -87,20 +84,8 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const goSocial = (provider: Provider) => {
-    // OAuth 라운드트립 통해 fromPath 보존 (React state 는 페이지 reload 로 사라짐)
-    try { sessionStorage.setItem('typrun_login_from', fromPath); } catch {}
-    // 초대링크 ref 가 localStorage 에 있으면 백엔드로 포워딩
-    let refParam = '';
-    try {
-      const r = localStorage.getItem('typrun_invite_ref');
-      if (r && /^\d+$/.test(r)) refParam = `&ref=${encodeURIComponent(r)}`;
-    } catch { /* ignore */ }
-    // BrowserRouter — 콜백 후 현재 로그인 경로(/login 또는 /kr/login, locale 보존)로 복귀.
-    // 서버가 return 에 ?auth=ok 를 붙여 리다이렉트 → useEffect 가 search 에서 처리.
-    const ret = encodeURIComponent(window.location.origin + window.location.pathname);
-    window.location.href = `${API_BASE}/auth/${provider}/url?return=${ret}${refParam}`;
-  };
+  // OAuth 라운드트립(fromPath 보존·초대 ref 포워딩·로케일별 /login 복귀)은 lib/socialLogin 공용 — GameOverPage CTA 와 동일 규약
+  const goSocial = (provider: Provider) => startSocialLogin(provider, fromPath);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,13 +195,7 @@ export default function LoginPage() {
         <>
         {/* 소셜 로그인 */}
         <div className="space-y-2 mb-6">
-          {(
-            [
-              { id: 'google' as Provider, name: 'Google', icon: 'G', cls: 'bg-white text-zinc-900 hover:bg-white/90' },
-              { id: 'kakao'  as Provider, name: 'Kakao',  icon: '💬', cls: 'bg-yellow-400 text-zinc-900 hover:bg-yellow-300' },
-              { id: 'naver'  as Provider, name: 'Naver',  icon: 'N',  cls: 'bg-[#03C75A] text-white hover:bg-[#02b350]' },
-            ]
-          ).map((p) => (
+          {SOCIAL_PROVIDERS.map((p) => (
             <button
               key={p.id}
               type="button"

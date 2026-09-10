@@ -5,6 +5,7 @@ import type {
   WordsResponse,
   ScoreSaveResponse,
   RankingsResponse,
+  RankPreview,
   ReferralRankingsResponse,
   DrawResponse,
   DrawWinnersResponse,
@@ -79,6 +80,12 @@ export const api = {
       method: 'POST',
       body,
     });
+  },
+
+  // 비회원 점수 → 로그인하면 몇 위인지 미리보기 (게임오버 CTA)
+  rankPreview(categorySeq: number, score: number): Promise<RankPreview> {
+    const q = new URLSearchParams({ category_seq: String(categorySeq), score: String(Math.max(0, Math.round(score))) });
+    return request<RankPreview>(`/rank_preview?${q.toString()}`);
   },
 
   // 랭킹 상위 N

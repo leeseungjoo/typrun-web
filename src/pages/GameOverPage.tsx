@@ -5,7 +5,9 @@ import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import BannerSlot from '../components/BannerSlot';
-import type { ScoreSaveResponse } from '../api/types';
+import { SOCIAL_PROVIDERS, startSocialLogin, type SocialProvider } from '../lib/socialLogin';
+import { track } from '../lib/track';
+import type { RankPreview, ScoreSaveResponse } from '../api/types';
 
 const PENDING_KEY = 'typrun_pending_result';
 
@@ -59,6 +61,8 @@ export default function GameOverPage() {
   const [saveRes, setSaveRes] = useState<ScoreSaveResponse | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const savedOnce = useRef(false);
+  // 비회원 CTA — "지금 로그인하면 N위". 실패해도 CTA 는 일반 문구로 뜬다(전환 흐름을 막지 않음).
+  const [preview, setPreview] = useState<RankPreview | null>(null);
 
   // location.state 로 들어왔으면 sessionStorage 에도 백업 (OAuth 라운드트립 대비)
   useEffect(() => {
@@ -85,11 +89,33 @@ export default function GameOverPage() {
       .finally(() => setSaving(false));
   }, [result, user, authLoading]);
 
-  const goLogin = () => {
+  useEffect(() => {
+    if (!result || result.is_practice || authLoading || user) return;
+    let alive = true;
+    api
+      .rankPreview(result.category_seq, result.score)
+      .then((r) => { if (alive) setPreview(r); })
+      .catch(() => { /* 미리보기 실패는 무해 — 일반 문구로 폴백 */ });
+    return () => { alive = false; };
+  }, [result, user, authLoading]);
+
+  // 결과를 sessionStorage 에 남겨 두면 로그인 라운드트립 후 /game-over 복귀 시 자동 저장된다(위 useEffect).
+  const persistResult = () => {
     if (result) {
       try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(result)); } catch {}
     }
+  };
+
+  const goLogin = () => {
+    persistResult();
+    track('cta_login', 'email|gameover');
     nav('/login', { state: { from: '/game-over' } });
+  };
+
+  // 소셜 원클릭 — 로그인 화면을 거치지 않고 바로 OAuth 로. 콜백은 /login → from(/game-over) 복귀.
+  const goSocial = (provider: SocialProvider) => {
+    persistResult();
+    startSocialLogin(provider, '/game-over', 'gameover');
   };
 
   if (!result) {
@@ -142,15 +168,45 @@ export default function GameOverPage() {
           </div>
         )}
 
-        {/* 랭킹 리그 · 비로그인: 로그인 유도 카드 */}
+        {/* 랭킹 리그 · 비로그인: "지금 로그인하면 N위" + 소셜 원클릭 (게스트→회원 전환 CTA) */}
         {!isPractice && !authLoading && !user && (
-          <div className="card text-center max-w-md">
-            <div className="text-sm text-white/80 mb-3">
-              {t('gameover.loginPromptLine1')}<br />
-              {t('gameover.loginPromptLine2')} 🏆
+          <div className="card text-center max-w-md w-full">
+            {preview ? (
+              <div className="text-sm text-white/85 mb-1 flex items-baseline justify-center gap-1.5 flex-wrap">
+                <span>{t('gameover.loginRankBefore')}</span>
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+                  className="font-impact text-3xl text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.4)]"
+                >
+                  #{preview.rank_no}
+                </motion.span>
+                <span>{t('gameover.loginRankAfter')} 🏆</span>
+              </div>
+            ) : (
+              <div className="text-sm text-white/80 mb-1">
+                {t('gameover.loginPromptLine2')} 🏆
+              </div>
+            )}
+            {preview && preview.ranked_count > 0 && (
+              <div className="text-[11px] text-white/45 mb-3">{t('gameover.rankedCount', { count: preview.ranked_count })}</div>
+            )}
+            <div className="space-y-2 mt-3">
+              {SOCIAL_PROVIDERS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => goSocial(p.id)}
+                  className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] ${p.cls}`}
+                >
+                  <span className="text-base">{p.icon}</span>
+                  {t('auth.continueWith', { provider: p.name })}
+                </button>
+              ))}
             </div>
-            <button className="btn-primary w-full" onClick={goLogin}>
-              {t('gameover.loginAndRegister')}
+            <button type="button" className="text-xs text-white/55 underline underline-offset-2 mt-3 hover:text-white" onClick={goLogin}>
+              {t('gameover.loginWithEmail')}
             </button>
             <div className="text-[10px] text-white/40 mt-2">
               {t('gameover.autoSaveHint')}

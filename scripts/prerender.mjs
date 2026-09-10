@@ -7,6 +7,7 @@
 //   dist/kr/index.html       /kr          (ko, 한국어 메인)
 //   dist/test/index.html     /test        (en)
 //   dist/kr/test/index.html  /kr/test     (ko)
+//   dist/kr/league/19/index.html  /kr/league/19  (ko — 한글 타자연습 리그 착지 페이지, 단독)
 //   dist/kr/privacy/index.html, dist/kr/terms/index.html   (ko 법적 고지 — 신뢰 신호)
 //   dist/privacy/index.html, dist/terms/index.html         (실제 본문이 한국어이므로 /kr/* 로 canonical 통합)
 //   dist/app.html            사전 렌더 대상이 아닌 앱 라우트용 폴백 셸 (noindex, canonical 없음)
@@ -110,6 +111,7 @@ const PAGES = [
     body: `
       <nav aria-label="주 메뉴">
         <a href="/kr/test">타자 속도 테스트</a>
+        <a href="/kr/league/19">한글 타자연습 리그</a>
         <a href="/">English</a>
       </nav>
       <main>
@@ -122,8 +124,8 @@ const PAGES = [
            단어를 모두 입력해 결승선까지 달리는 타자 레이스, 초대 링크로 친구와 겨루는
            실시간 대결, 모바일 전용 탭 러너를 제공합니다.</p>
         <h2>주제별 리그</h2>
-        <p>생초보 한글부터 영어 단어, 영화 제목, 아이돌, 사자성어까지 주제별 리그에서
-           원하는 단어로 연습할 수 있습니다. 리그마다 난이도가 다르게 설정되어 있습니다.</p>
+        <p>생초보 한글부터 <a href="/kr/league/19">한글 타자연습</a>, 영어 단어, 아이돌, 사자성어까지
+           주제별 리그에서 원하는 단어로 연습할 수 있습니다. 리그마다 난이도가 다르게 설정되어 있습니다.</p>
         <h2>랭킹과 시즌</h2>
         <p>랭킹은 매월 1일 초기화되어 누구나 새로 도전할 수 있습니다. 로그인 없이도 플레이할 수
            있고, 로그인하면 기록이 저장되어 월간 랭킹에 집계됩니다.</p>
@@ -333,6 +335,50 @@ const PAGES = [
         <p>본 약관은 관련 법령에 따라 변경될 수 있으며, 변경 시 서비스 내 공지를 통해 알립니다.
            명시되지 않은 사항은 관련 법령 및 상관례에 따르며, 분쟁은 대한민국 법을 준거법으로
            합니다.</p>
+      </main>
+      <footer>${OPERATOR_FOOTER_KO}</footer>`,
+  },
+  {
+    out: 'kr/league/19/index.html',
+    lang: 'ko',
+    canonical: `${ORIGIN}/kr/league/19`,
+    hreflang: null,
+    priority: '0.7',
+    title: '한글 타자연습 게임 — 한글 타자 리그 | 타입런',
+    description:
+      '일상 한글 단어와 속담 343개로 하는 무료 한글 타자연습 게임. 받침과 띄어쓰기까지 연습하고 월간 랭킹에 도전하세요.',
+    ogLocale: 'ko_KR',
+    jsonld: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: '한글 타자연습 게임 — 한글 타자 리그 | 타입런',
+      url: `${ORIGIN}/kr/league/19`,
+      inLanguage: 'ko',
+      isPartOf: { '@type': 'WebSite', name: '타입런(TypRun)', url: `${ORIGIN}/kr` },
+      about: { '@type': 'Thing', name: '한글 타자연습' },
+    },
+    body: `
+      <nav aria-label="주 메뉴">
+        <a href="/kr">홈</a>
+        <a href="/kr/league">리그 전체</a>
+        <a href="/kr/test">타자 속도 테스트</a>
+      </nav>
+      <main>
+        <h1>한글 타자연습 게임 — 한글 타자 리그</h1>
+        <p>한글 타자 리그는 일상에서 자주 쓰는 한글 단어와 속담 343개로 타자연습을 하는 타입런의 랭킹
+           리그입니다. 화면 위에서 떨어지는 단어를 그대로 입력해 없애는 방식이라, 자판을 외우는
+           단계를 지난 분이 속도와 정확도를 함께 끌어올리기에 알맞습니다. 설치나 회원가입 없이
+           브라우저에서 바로 시작할 수 있습니다.</p>
+        <h2>어떤 단어가 나오나요</h2>
+        <p>학교·하늘·친구 같은 두세 글자 단어부터 도서관·놀이터·지하철역 같은 네다섯 글자 단어,
+           닭갈비·괜찮다·읽다처럼 겹받침이 들어간 단어, 떡볶이·쌀밥·꽃다발처럼 쌍자음이 들어간
+           단어, 두근두근·알록달록 같은 의성어·의태어, 그리고 “티끌 모아 태산”, “천 리 길도 한
+           걸음부터” 같은 속담 서른 개가 섞여 나옵니다. 긴 단어일수록 점수가 높고, 연속으로
+           맞히면 콤보 배율이 붙습니다.</p>
+        <h2>랭킹과 대결</h2>
+        <p>로그인하면 점수가 저장되어 매월 1일 초기화되는 월간 랭킹에 집계됩니다. 같은 리그에서
+           2인 실시간 배틀을 하거나, 초대 링크를 보내 친구와 1:1로 겨룰 수도 있습니다. 게임이
+           끝나면 지금 점수로 몇 위인지 바로 보여 드립니다.</p>
       </main>
       <footer>${OPERATOR_FOOTER_KO}</footer>`,
   },
