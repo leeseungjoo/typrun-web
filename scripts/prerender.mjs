@@ -25,10 +25,12 @@ const BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 const OPERATOR_FOOTER_KO =
   '<a href="/kr/privacy">개인정보처리방침</a> · <a href="/kr/terms">이용약관</a> · ' +
-  '운영사: Typ Run (<a href="https://kioskprogram.com" rel="noopener">kioskprogram.com</a>) · © 2026 Typ Run';
+  '운영사: Typ Run (<a href="https://kioskprogram.com" rel="noopener">kioskprogram.com</a>) · ' +
+  '<a href="https://sayihello.com" rel="noopener">sayihello</a> · © 2026 Typ Run';
 const OPERATOR_FOOTER_EN =
   '<a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms</a> · ' +
-  'Operator: Typ Run (<a href="https://kioskprogram.com" rel="noopener">kioskprogram.com</a>) · © 2026 Typ Run';
+  'Operator: Typ Run (<a href="https://kioskprogram.com" rel="noopener">kioskprogram.com</a>) · ' +
+  '<a href="https://sayihello.com" rel="noopener">sayihello</a> · © 2026 Typ Run';
 
 /**
  * 페이지 정의.

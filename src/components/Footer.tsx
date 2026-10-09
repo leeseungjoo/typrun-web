@@ -28,6 +28,16 @@ export default function Footer({ onContact }: FooterProps) {
         >
           {t('footer.operator')}
         </a>
+        <span className="text-white/20">·</span>
+        <a
+          href="https://sayihello.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-white/80 transition"
+          title="sayihello — draw a face, say hello to the world"
+        >
+          sayihello
+        </a>
         {onContact && (
           <>
             <span className="text-white/20">·</span>
