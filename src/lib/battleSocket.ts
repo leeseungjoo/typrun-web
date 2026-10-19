@@ -9,6 +9,7 @@ const DEFAULT_WS_URL = 'ws://localhost:3001/ws';
 const PING_MS = 20000;
 const BACKOFF_BASE_MS = 500;
 const BACKOFF_MAX_MS = 8000;
+const CLOSE_REPLACED = 4001; // 서버(typrun-ws)가 같은 계정의 새 연결로 교체할 때 쓰는 close 코드
 
 export type SocketState = 'connecting' | 'open' | 'closed';
 
@@ -80,8 +81,11 @@ export class BattleSocket {
       for (const l of this.msgListeners) l(msg);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       this.stopPing();
+      // 4001 = 같은 계정의 다른 연결(다른 탭·재접속)이 이 연결을 교체함 — 재연결하면 둘이 서로를 끊는 핑퐁이 된다.
+      // (2026-09-30 학교 수업에서 한 세션이 5분에 168번 초대방을 다시 만든 원인.) 교체된 쪽은 조용히 멈춘다.
+      if (ev.code === CLOSE_REPLACED) this.closedByUser = true;
       this.emitState('closed');
       if (!this.closedByUser) this.scheduleReconnect();
     };
