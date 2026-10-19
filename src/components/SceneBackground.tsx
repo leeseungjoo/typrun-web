@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { SITE_THEME } from '../lib/theme';
 
 /**
  * 전 페이지 공통 배경 — 심플 그라데이션 + 위에서 아래로 떨어지는 별비(기획 2026-06-15).
@@ -39,9 +40,10 @@ function buildStars(): Star[] {
   return stars;
 }
 
-/** 교실 모드 화면인지 — 수업 페이지이거나, 수업에서 시작한 게임(router state 에 classCode). */
+/** 칠판 배경을 쓸지 — 사이트 테마가 classroom 이면 항상, 아니면 교실 모드 화면(/school·/class·수업에서 시작한 게임)만. */
 export function useIsClassroomScene(): boolean {
   const loc = useLocation();
+  if (SITE_THEME === 'classroom') return true;
   const p = loc.pathname;
   if (p.startsWith('/school') || p.startsWith('/class')) return true;
   return p.startsWith('/game') && !!(loc.state as { classCode?: string } | null)?.classCode;

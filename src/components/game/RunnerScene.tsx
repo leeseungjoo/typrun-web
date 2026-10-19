@@ -4,6 +4,7 @@
 import { memo, useEffect, useRef } from 'react';
 import { getRunnerSprites, type RunnerSkin } from './runnerAssets';
 import { getClassroomBackdrop } from './classroomAssets';
+import { SITE_THEME } from '../../lib/theme';
 
 export type SceneTheme = 'default' | 'classroom';
 
@@ -33,6 +34,8 @@ const BOTTOM_RESERVED = 300; // 하단 컨트롤(인벤토리·입력줄)에 안
 interface DustP { x: number; y: number; vx: number; vy: number; life: number }
 
 export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'classic', theme = 'default' }: RunnerSceneProps) {
+  // 사이트 테마가 classroom 이면 호출부가 무엇을 주든 교실 소품(배경 칠판과 어울리게). 'starfall' 로 돌리면 prop 대로.
+  const effectiveTheme: SceneTheme = SITE_THEME === 'classroom' ? 'classroom' : theme;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 게임 상태는 ref 로만 소비 — 씬 자체는 리렌더 없이 rAF 로 돈다
   const hpRef = useRef(hp);
@@ -72,7 +75,7 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'cla
     if (!ctx) return;
 
     const spr = getRunnerSprites(skin);
-    const back = theme === 'classroom'
+    const back = effectiveTheme === 'classroom'
       ? getClassroomBackdrop()
       : { skyline: spr.skyline, hills: spr.hills, ground: spr.ground, glowRgb: DEFAULT_GLOW_RGB, underFill: DEFAULT_UNDER_FILL };
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -217,7 +220,7 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'cla
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [skin, theme]);
+  }, [skin, effectiveTheme]);
 
   return (
     <canvas
