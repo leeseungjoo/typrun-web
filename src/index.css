@@ -66,6 +66,72 @@ body {
   }
 }
 
+/* ── 교실 모드 칠판 배경 (SceneBackground ChalkboardBackground) ─────────── */
+.chalkboard {
+  background-color: #1d3828;
+  background-image:
+    radial-gradient(1100px 680px at 50% 34%, rgba(255, 255, 255, 0.055), transparent 70%),
+    radial-gradient(520px 260px at 16% 20%, rgba(255, 255, 255, 0.05), transparent 70%),
+    radial-gradient(640px 300px at 84% 72%, rgba(255, 255, 255, 0.04), transparent 70%),
+    linear-gradient(180deg, #24432f 0%, #1d3828 55%, #172e21 100%);
+}
+/* 분필 지운 자국 같은 미세 결 — SVG 노이즈 1장(가벼움), 정지 레이어 */
+.chalkboard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 화면 맨 아래 분필받이(나무) */
+.chalk-tray {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  background: linear-gradient(180deg, #a87445 0%, #6b4526 60%, #4a2f19 100%);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.35);
+}
+.chalk-doodle {
+  position: absolute;
+  color: #f3f1e4;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.6), 0 0 8px rgba(255, 255, 255, 0.12);
+  will-change: transform, opacity;
+  animation: chalk-float var(--cd-dur, 12s) ease-in-out infinite;
+  animation-delay: var(--cd-delay, 0s);
+  user-select: none;
+}
+@keyframes chalk-float {
+  0% { transform: translateY(12px) rotate(var(--cd-rot, 0deg)); opacity: 0; }
+  25% { opacity: var(--cd-max, 0.18); }
+  50% { transform: translateY(-8px) rotate(calc(var(--cd-rot, 0deg) + 4deg)); }
+  75% { opacity: var(--cd-max, 0.18); }
+  100% { transform: translateY(12px) rotate(var(--cd-rot, 0deg)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chalk-doodle {
+    animation: none;
+    opacity: var(--cd-max, 0.18);
+    transform: rotate(var(--cd-rot, 0deg));
+  }
+}
+/* 칠판 위 분필 글씨 느낌 — 교실 모드 제목·코드 */
+.chalk-text {
+  color: #f6f4e8;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.15);
+}
+.chalk-card {
+  background: rgba(10, 24, 16, 0.42);
+  border: 1px solid rgba(246, 244, 232, 0.16);
+  border-radius: 1rem;
+  backdrop-filter: blur(6px);
+}
+
 /* ── 게임 타격감/연출 ───────────────────────────────── */
 @keyframes gamePunch { 0% { transform: scale(1); } 38% { transform: scale(1.03); } 100% { transform: scale(1); } }
 @keyframes crisisPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.95; } }

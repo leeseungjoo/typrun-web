@@ -8,6 +8,7 @@
 //   dist/test/index.html     /test        (en)
 //   dist/kr/test/index.html  /kr/test     (ko)
 //   dist/kr/league/19/index.html  /kr/league/19  (ko — 한글 타자연습 리그 착지 페이지, 단독)
+//   dist/kr/school/index.html     /kr/school     (ko — 선생님용 교실 모드 소개, React SchoolPage 와 같은 내용)
 //   dist/kr/privacy/index.html, dist/kr/terms/index.html   (ko 법적 고지 — 신뢰 신호)
 //   dist/privacy/index.html, dist/terms/index.html         (실제 본문이 한국어이므로 /kr/* 로 canonical 통합)
 //   dist/app.html            사전 렌더 대상이 아닌 앱 라우트용 폴백 셸 (noindex, canonical 없음)
@@ -24,6 +25,7 @@ const ORIGIN = 'https://typrun.com';
 const BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 const OPERATOR_FOOTER_KO =
+  '<a href="/kr/school">선생님용 교실 모드</a> · ' +
   '<a href="/kr/privacy">개인정보처리방침</a> · <a href="/kr/terms">이용약관</a> · ' +
   '운영사: Typ Run (<a href="https://kioskprogram.com" rel="noopener">kioskprogram.com</a>) · ' +
   '<a href="https://sayihello.com" rel="noopener">sayihello</a> · © 2026 Typ Run';
@@ -246,7 +248,10 @@ const PAGES = [
            식별자와 제공사가 전달한 이메일·닉네임·프로필 이미지, 선택 항목으로 자기소개와
            프로필 이미지를 수집합니다. 게임 이용 시 점수·정확도·타수(WPM)·콤보·플레이 시간이
            자동 생성되며, 경품 당첨 시 상품 발송용 이메일, 문의 접수 시 이름과 회신용 연락처를
-           받습니다. 부정 이용·도배 방지를 위해 접속 IP 주소를 자동 수집합니다.</p>
+           받습니다. 부정 이용·도배 방지를 위해 접속 IP 주소를 자동 수집합니다.
+           교실 모드에서는 수업을 만드는 선생님(회원)의 수업 이름과 선택한 리그, 수업에 참여하는
+           학생(비회원)이 직접 입력한 번호 또는 별명과 게임 기록, 같은 기기의 기록을 묶기 위한
+           무작위 기기 토큰을 저장하며, 학생의 계정·이름·연락처는 받지 않습니다.</p>
         <h2>2. 개인정보의 수집·이용 목적</h2>
         <p>회원 식별과 로그인 유지, 타자 게임 서비스 제공과 점수 기록 및 리그·랭킹 운영,
            경품 추첨과 당첨 안내, 친구 추천 이벤트 집계, 문의 응대, 매크로·도배 등 부정 이용
@@ -254,7 +259,8 @@ const PAGES = [
         <h2>3. 보유 및 이용 기간</h2>
         <p>개인정보는 수집·이용 목적이 달성되거나 회원 탈퇴 시 지체 없이 파기합니다. 단 관련
            법령에 따라 보존이 필요한 경우 해당 기간 동안 보관합니다. 게임 기록·랭킹은 회원
-           탈퇴 시까지 보관하며 통계는 익명 처리 후 보관할 수 있습니다.</p>
+           탈퇴 시까지 보관하며 통계는 익명 처리 후 보관할 수 있습니다. 교실 모드 수업과 학생
+           기록은 수업을 만든 날부터 30일 뒤 자동 삭제됩니다.</p>
         <h2>4. 제3자 제공 및 처리위탁</h2>
         <p>서비스는 이용자의 개인정보를 외부에 판매하거나 제공하지 않습니다. 다만 소셜
            로그인(카카오·구글·네이버) 인증과 회원 인증·비밀번호 재설정·문의 회신 메일 발송을
@@ -381,6 +387,76 @@ const PAGES = [
         <p>로그인하면 점수가 저장되어 매월 1일 초기화되는 월간 랭킹에 집계됩니다. 같은 리그에서
            2인 실시간 배틀을 하거나, 초대 링크를 보내 친구와 1:1로 겨룰 수도 있습니다. 게임이
            끝나면 지금 점수로 몇 위인지 바로 보여 드립니다.</p>
+      </main>
+      <footer>${OPERATOR_FOOTER_KO}</footer>`,
+  },
+  {
+    // ⚠ React SchoolPage(src/pages/SchoolPage.tsx · i18n classroom.*) 와 같은 내용을 유지할 것 — 패리티
+    out: 'kr/school/index.html',
+    lang: 'ko',
+    canonical: `${ORIGIN}/kr/school`,
+    hreflang: null,
+    priority: '0.7',
+    title: '학교 수업용 타자연습 — 교실 모드 | 타입런',
+    description:
+      '링크 하나로 반 전체가 같은 리그에서 겨루는 무료 타자연습 수업 도구. 학생은 가입 없이 번호만 입력하고 반 랭킹은 전자칠판에 띄웁니다.',
+    ogLocale: 'ko_KR',
+    jsonld: {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: '학교 수업용 타자연습 — 교실 모드 | 타입런',
+      url: `${ORIGIN}/kr/school`,
+      inLanguage: 'ko',
+      isPartOf: { '@type': 'WebSite', name: '타입런(TypRun)', url: `${ORIGIN}/kr` },
+      about: { '@type': 'Thing', name: '타자연습 수업' },
+      audience: { '@type': 'EducationalAudience', educationalRole: 'teacher' },
+    },
+    body: `
+      <nav aria-label="주 메뉴">
+        <a href="/kr">홈</a>
+        <a href="/kr/league">리그 전체</a>
+        <a href="/kr/league/19">한글 타자연습 리그</a>
+      </nav>
+      <main>
+        <p>선생님용 · 무료</p>
+        <h1>수업에 바로 쓰는 타자연습</h1>
+        <p>타입런 교실 모드 — 링크 하나로 반 전체가 같은 리그에 들어오고, 전자칠판에 반 랭킹이
+           실시간으로 올라갑니다. 설치도, 학생 회원가입도 필요 없어요.</p>
+        <p>이미 여러 학교에서 수업 시간에 타입런을 쓰고 있어요.</p>
+        <h2>수업 준비는 3단계</h2>
+        <ol>
+          <li><h3>리그 고르고 수업 만들기</h3>
+            <p>구글·카카오·네이버로 로그인하고 수업 이름과 리그를 고르면 수업 코드가 나와요.</p></li>
+          <li><h3>링크·QR·코드 공유</h3>
+            <p>패들렛·클래스룸·학급 단톡에 링크를 붙이거나 칠판에 코드를 적어 주세요.
+               학생은 번호만 입력하면 바로 시작해요.</p></li>
+          <li><h3>전자칠판에 반 랭킹 띄우기</h3>
+            <p>반 랭킹 화면은 5초마다 자동으로 바뀌어요. 수업이 끝나면 기록을 CSV로 내려받을 수 있어요.</p></li>
+        </ol>
+        <h2>학교에서 쓰기 좋은 이유</h2>
+        <ul>
+          <li><h3>설치 없이 브라우저로</h3><p>크롬북·태블릿·컴퓨터실 PC 어디서나 열려요.</p></li>
+          <li><h3>학생 개인정보 수집 없음</h3>
+            <p>학생은 가입하지 않고 번호나 별명만 입력해요. 이름 대신 번호를 쓰도록 안내해 주세요.</p></li>
+          <li><h3>기록은 30일 뒤 자동 삭제</h3><p>반 랭킹과 기록은 수업을 만든 날부터 30일 동안만 보관돼요.</p></li>
+          <li><h3>한글·영어·예방교육 리그</h3>
+            <p>한글 타자연습과 초등 영단어에 학교폭력·사이버폭력·디지털 시민성·마약 예방 리그까지 있어요.</p></li>
+        </ul>
+        <h2>수업에 어울리는 리그</h2>
+        <p>타자를 연습하는 동안 예방교육 표어가 손에 익도록 만든 리그도 있어요.</p>
+        <p><a href="/kr/league/19">한글 타자연습</a> · 초등(고학년) 영단어 · 초등(저학년) 영단어 ·
+           학교폭력 예방 · 사이버폭력 예방 · 디지털 시민성 · 마약·약물 예방 · 불법 도박 근절 캠페인</p>
+        <h2>자주 묻는 질문</h2>
+        <dl>
+          <dt>학생도 회원가입을 해야 하나요?</dt>
+          <dd>아니요. 학생은 수업 링크로 들어와 번호나 별명만 입력하면 됩니다. 수업을 만드는 선생님만 로그인해요.</dd>
+          <dt>한 반에 몇 명까지 되나요?</dt>
+          <dd>인원 제한은 없어요. 반 랭킹 화면에는 상위 30명이 보이고, CSV에는 최대 100명까지 담겨요.</dd>
+          <dt>비용이 드나요?</dt>
+          <dd>무료예요.</dd>
+          <dt>수업 중에 기록을 멈출 수 있나요?</dt>
+          <dd>반 랭킹 화면에서 수업 마치기를 누르면 더 이상 기록이 올라가지 않아요. 다시 열 수도 있어요.</dd>
+        </dl>
       </main>
       <footer>${OPERATOR_FOOTER_KO}</footer>`,
   },

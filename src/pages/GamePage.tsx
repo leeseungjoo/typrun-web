@@ -1,5 +1,5 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
@@ -10,6 +10,7 @@ import { useVisualViewportBox } from '../hooks/useKeyboardInset';
 import RunnerScene from '../components/game/RunnerScene';
 import { getStoredSkin } from '../components/game/runnerAssets';
 import { track } from '../lib/track';
+import { loadClassCtx, randomId, type ClassGameResult } from '../lib/classroomCtx';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -140,6 +141,14 @@ export default function GamePage() {
   const { categorySeq } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
+  // 교실 모드 — 수업 입장 화면이 router state 로 classCode 를 넘긴다. 리그가 다르면 무시(일반 게임).
+  const loc = useLocation();
+  const stateClassCode = (loc.state as { classCode?: string } | null)?.classCode;
+  const classCtx = useMemo(() => {
+    const ctx = loadClassCtx(stateClassCode);
+    return ctx && ctx.categorySeq === Number(categorySeq) ? ctx : null;
+  }, [stateClassCode, categorySeq]);
+  const exitPath = classCtx ? `/class/${classCtx.code}` : '/league'; // 그만두기·뒤로가기 목적지
   const vvBox = useVisualViewportBox(); // 모바일 키보드 올라온 만큼 게임 화면을 '보이는 영역'으로 고정(낙하 시작점이 화면 밖으로 안 나가게)
   const [eventTitle, setEventTitle] = useState<string | null>(null);
   // 활성 친구추천 이벤트 → 게임화면 랭크확인(초대) 버튼
@@ -445,6 +454,23 @@ export default function GamePage() {
     const accuracy = total === 0 ? 0 : correct / total;
     const wpm = playTime > 0 ? Math.round((correct / playTime) * 60) : 0;
 
+    // 교실 모드 — 일반 저장(score_save)·로그인 CTA 를 거치지 않고 반 랭킹으로. resultId = 이 판 1회 제출 키.
+    if (classCtx) {
+      const result: ClassGameResult = {
+        resultId: randomId(16),
+        category_seq: Number(categorySeq),
+        score,
+        max_combo: maxCombo,
+        correct_count: correct,
+        miss_count: miss,
+        accuracy: Number(accuracy.toFixed(4)),
+        wpm,
+        play_time_sec: Math.round(playTime),
+      };
+      nav(`/class/${classCtx.code}/result`, { replace: true, state: { result } });
+      return;
+    }
+
     nav('/game-over', {
       replace: true,
       state: {
@@ -467,7 +493,7 @@ export default function GamePage() {
   useEffect(() => {
     if (phase === 'playing' && !playTrackedRef.current) {
       playTrackedRef.current = true;
-      track('play_game', isPractice ? 'practice' : isSuperBeginner ? 'beginner' : 'ranking');
+      track('play_game', classCtx ? 'class' : isPractice ? 'practice' : isSuperBeginner ? 'beginner' : 'ranking');
     }
   }, [phase, isPractice, isSuperBeginner]);
 
@@ -479,14 +505,14 @@ export default function GamePage() {
     window.history.pushState({ gameGuard: true }, '');
     const onPop = () => {
       if (window.confirm(t('game.quitConfirm'))) {
-        nav('/league');
+        nav(exitPath);
       } else {
         window.history.pushState({ gameGuard: true }, ''); // 취소 → 가드 복원
       }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [phase, t, nav]);
+  }, [phase, t, nav, exitPath]);
 
   // 비정상 입력 차단 시 잠깐 안내 플래시
   const flashInputWarn = () => {
@@ -718,7 +744,7 @@ export default function GamePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
         <p className="text-red-400">{t('game.errorPrefix', { msg: err })}</p>
-        <button className="btn-ghost" onClick={() => nav('/league')}>{t('game.chooseLeague')}</button>
+        <button className="btn-ghost" onClick={() => nav(exitPath)}>{classCtx ? t('classroom.backToClass') : t('game.chooseLeague')}</button>
       </div>
     );
   }
@@ -763,8 +789,8 @@ export default function GamePage() {
           </span>
           <span className="text-sm text-white/60">{t('game.autoStartCountdown')}</span>
         </div>
-        <button className="btn-ghost text-sm" onClick={() => nav('/league')}>
-          {t('game.chooseLeague')}
+        <button className="btn-ghost text-sm" onClick={() => nav(exitPath)}>
+          {classCtx ? t('classroom.backToClass') : t('game.chooseLeague')}
         </button>
       </div>
     );
@@ -826,7 +852,7 @@ export default function GamePage() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               if (window.confirm(t('game.quitConfirm'))) {
-                nav('/league');
+                nav(exitPath);
               }
             }}
             className="text-white/60 hover:text-red-400 text-lg leading-none"
@@ -841,7 +867,14 @@ export default function GamePage() {
       {/* PlayField — 화면 전체, 단어가 끝까지 떨어져 화면 밖에서 죽음 */}
       <div className="absolute inset-0">
         {/* 러너 씬 — 판정 무관 그림 레이어(캔버스). 정답/미스/HP 를 읽기만 함. 스킨은 회원 보상 */}
-        <RunnerScene hp={hp} maxHp={MAX_HP} correct={correct} miss={miss} skin={user ? getStoredSkin() : 'classic'} />
+        <RunnerScene
+          hp={hp}
+          maxHp={MAX_HP}
+          correct={correct}
+          miss={miss}
+          skin={user ? getStoredSkin() : 'classic'}
+          theme={classCtx ? 'classroom' : 'default'}
+        />
         {/* 활성 효과 배너 (상단 중앙) */}
         {effects.length > 0 && (
           <div className="absolute top-16 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none">
@@ -1112,7 +1145,13 @@ export default function GamePage() {
 
       {/* Input + 좌우 네비 버튼 (로그인 · 홈) */}
       <div className="relative px-6 py-4 mb-[10px] border-t border-white/10 bg-black/30 flex items-center justify-center gap-3">
-        {eventTitle && (
+        {/* 교실 모드 — 학생에게 로그인·이벤트를 권하지 않는다. 별명 칩만 보여 준다. */}
+        {classCtx && (
+          <span className="topbtn shrink-0 max-w-[22vw] truncate cursor-default !hidden sm:!inline-flex" title={classCtx.title}>
+            ✏️ {classCtx.nickname}
+          </span>
+        )}
+        {!classCtx && eventTitle && (
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
@@ -1123,15 +1162,17 @@ export default function GamePage() {
             🤝 {eventTitle}
           </button>
         )}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => goWithConfirm(user ? '/profile' : '/login')}
-          className="topbtn shrink-0 max-w-[22vw] truncate"
-          title={user ? t('game.myInfo') : t('game.login')}
-        >
-          {user ? `👤 ${user.nickname}` : t('game.login')}
-        </button>
+        {!classCtx && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => goWithConfirm(user ? '/profile' : '/login')}
+            className="topbtn shrink-0 max-w-[22vw] truncate"
+            title={user ? t('game.myInfo') : t('game.login')}
+          >
+            {user ? `👤 ${user.nickname}` : t('game.login')}
+          </button>
+        )}
         <input
           ref={inputRef}
           autoFocus
@@ -1227,11 +1268,18 @@ export default function GamePage() {
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => goWithConfirm('/')}
+          onClick={() => goWithConfirm(classCtx ? exitPath : '/')}
           className="topbtn shrink-0"
-          title={t('game.toHome')}
+          title={classCtx ? t('classroom.backToClass') : t('game.toHome')}
         >
-          🏠 {t('game.home')}
+          {classCtx ? (
+            <>
+              <span aria-hidden>🏫</span>
+              <span className="hidden sm:inline">{t('classroom.backToClass')}</span>
+            </>
+          ) : (
+            `🏠 ${t('game.home')}`
+          )}
         </button>
         {inputWarn && (
           <span className="absolute left-1/2 -translate-x-1/2 top-0 text-xs text-red-400 font-bold pointer-events-none">

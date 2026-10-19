@@ -15,7 +15,9 @@ export default function Footer({ onContact }: FooterProps) {
   const { t } = useTranslation();
   return (
     <footer className="w-full pb-6 pt-2 px-6 text-center">
-      <nav className="flex items-center justify-center gap-3 text-[12px] text-white/45">
+      <nav className="flex flex-wrap items-center justify-center gap-3 text-[12px] text-white/45">
+        <Link to="/school" className="hover:text-white/80 transition">{t('footer.school')}</Link>
+        <span className="text-white/20">·</span>
         <Link to="/privacy" className="hover:text-white/80 transition">{t('footer.privacy')}</Link>
         <span className="text-white/20">·</span>
         <Link to="/terms" className="hover:text-white/80 transition">{t('footer.terms')}</Link>

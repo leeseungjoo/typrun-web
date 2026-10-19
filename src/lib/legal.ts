@@ -12,5 +12,6 @@ export const LEGAL = {
   contactEmail: 'lsj@kioskprogram.com',  // 공개 연락 이메일
   // ────────────────────────────────────────────────────────
 
-  effectiveDate: '2026-06-11', // 시행일
+  effectiveDate: '2026-06-11', // 이용약관 시행일
+  privacyEffectiveDate: '2026-10-19', // 개인정보처리방침 시행일 — 교실 모드 항목 추가 개정
 } as const;

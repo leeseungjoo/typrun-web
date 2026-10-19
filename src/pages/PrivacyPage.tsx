@@ -7,7 +7,7 @@ import { LEGAL } from '../lib/legal';
  */
 export default function PrivacyPage() {
   return (
-    <LegalShell title="개인정보처리방침" effectiveDate={LEGAL.effectiveDate}>
+    <LegalShell title="개인정보처리방침" effectiveDate={LEGAL.privacyEffectiveDate}>
       <p>
         {LEGAL.serviceName}({LEGAL.domain}, 이하 “서비스”)는 이용자의 개인정보를 중요하게
         생각하며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 본 방침은 서비스가 어떤
@@ -21,6 +21,11 @@ export default function PrivacyPage() {
           <li><b>소셜 로그인 시:</b> 제공사(카카오·구글·네이버) 식별자, 제공사가 전달한 이메일·닉네임·프로필 이미지</li>
           <li><b>프로필(선택):</b> 자기소개, 프로필 이미지</li>
           <li><b>게임 이용 시 자동 생성:</b> 점수·정확도·타수(WPM)·콤보·플레이 시간·플레이 일시</li>
+          <li><b>교실 모드 — 수업을 만드는 선생님(회원):</b> 수업 이름, 선택한 리그(회원 계정에 연결)</li>
+          <li>
+            <b>교실 모드 — 수업에 참여하는 학생(비회원):</b> 학생이 직접 입력한 번호 또는 별명, 게임 기록,
+            같은 기기의 기록을 묶기 위한 무작위 기기 토큰. 학생의 계정·이름·연락처는 받지 않습니다.
+          </li>
           <li><b>경품(추첨) 당첨 시:</b> 상품 발송·당첨 안내를 위한 이메일</li>
           <li><b>문의 접수 시:</b> 이름, 회신용 연락처(이메일 또는 전화), 회사·브랜드명(선택), 문의 내용</li>
           <li><b>자동 수집:</b> 접속 IP 주소(부정 이용·도배 방지 목적)</li>
@@ -49,6 +54,7 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>게임 기록·랭킹: 회원 탈퇴 시까지(통계는 익명 처리 후 보관 가능)</li>
+          <li>교실 모드 수업·학생 기록: 수업을 만든 날부터 30일 뒤 자동 삭제</li>
           <li>문의 기록: 응대 완료 후 일정 기간 보관 후 파기</li>
           <li>경품 발송 기록: 발송 및 분쟁 처리 완료 후 파기</li>
           <li>접속 IP: 부정 이용 방지 목적 달성 후 파기</li>

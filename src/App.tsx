@@ -23,6 +23,11 @@ import ProfilePage from './pages/ProfilePage';
 import DrawPage from './pages/DrawPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import SchoolPage from './pages/SchoolPage';
+import ClassManagePage from './pages/ClassManagePage';
+import ClassJoinPage from './pages/ClassJoinPage';
+import ClassResultPage from './pages/ClassResultPage';
+import ClassBoardPage from './pages/ClassBoardPage';
 import TopBar from './components/TopBar';
 import LocaleSuggestBanner from './components/LocaleSuggestBanner';
 import SceneBackground from './components/SceneBackground';
@@ -89,6 +94,12 @@ export default function App() {
         <Route path="/draw/:token" element={<DrawPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        {/* 교실 모드 — 선생님 소개·수업 관리 / 학생 입장(비회원)·결과 / 전자칠판 반 랭킹 */}
+        <Route path="/school" element={<SchoolPage />} />
+        <Route path="/school/manage" element={<ClassManagePage />} />
+        <Route path="/class/:code" element={<ClassJoinPage />} />
+        <Route path="/class/:code/result" element={<ClassResultPage />} />
+        <Route path="/class/:code/board" element={<ClassBoardPage />} />
         {/* 알 수 없는 경로 → 홈으로 (빈 화면 방지) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

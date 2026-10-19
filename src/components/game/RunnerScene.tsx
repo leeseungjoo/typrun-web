@@ -3,6 +3,9 @@
 // HP=몬스터와의 거리로 시각화한다. 손맛 수치는 TAJA RUN에서 추출한 공식(수치만 이식, 에셋 무관).
 import { memo, useEffect, useRef } from 'react';
 import { getRunnerSprites, type RunnerSkin } from './runnerAssets';
+import { getClassroomBackdrop } from './classroomAssets';
+
+export type SceneTheme = 'default' | 'classroom';
 
 interface RunnerSceneProps {
   hp: number;
@@ -10,7 +13,12 @@ interface RunnerSceneProps {
   correct: number; // 누적 정답 수 — 증가 감지 시 점프+부스트
   miss: number;    // 누적 미스 수 — 증가 감지 시 넘어짐+속도 리셋
   skin?: RunnerSkin; // 러너 의상 (회원 보상) — 기본 classic
+  theme?: SceneTheme; // 배경 소품 — classroom = 책장·책상·분필받이(교실 모드)
 }
+
+// 기본 테마의 지평선 발광·지면 아래 색 (classroom 은 classroomAssets 가 정의)
+const DEFAULT_GLOW_RGB = '94,114,255';
+const DEFAULT_UNDER_FILL = '#0F1226';
 
 // ★ TAJA RUN 손맛 공식 — 속도 = 기울기×경과 + 3(상한), 정답 = 경과 +2초(영구 가속), 미스 = 커브 재시작
 const SPEED_BASE = 3;
@@ -24,7 +32,7 @@ const BOTTOM_RESERVED = 300; // 하단 컨트롤(인벤토리·입력줄)에 안
 
 interface DustP { x: number; y: number; vx: number; vy: number; life: number }
 
-export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'classic' }: RunnerSceneProps) {
+export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'classic', theme = 'default' }: RunnerSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 게임 상태는 ref 로만 소비 — 씬 자체는 리렌더 없이 rAF 로 돈다
   const hpRef = useRef(hp);
@@ -64,6 +72,9 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'cla
     if (!ctx) return;
 
     const spr = getRunnerSprites(skin);
+    const back = theme === 'classroom'
+      ? getClassroomBackdrop()
+      : { skyline: spr.skyline, hills: spr.hills, ground: spr.ground, glowRgb: DEFAULT_GLOW_RGB, underFill: DEFAULT_UNDER_FILL };
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     startTimeRef.current = performance.now();
@@ -127,17 +138,17 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'cla
 
       // 지평선 발광 — 세계에 깊이감 (기존 별비 배경 위에 얹힘)
       const glow = ctx.createLinearGradient(0, groundY - 170 * sc, 0, groundY);
-      glow.addColorStop(0, 'rgba(94,114,255,0)');
-      glow.addColorStop(1, 'rgba(94,114,255,0.10)');
+      glow.addColorStop(0, `rgba(${back.glowRgb},0)`);
+      glow.addColorStop(1, `rgba(${back.glowRgb},0.10)`);
       ctx.fillStyle = glow;
       ctx.fillRect(0, groundY - 170 * sc, W, 170 * sc);
 
       // 패럴랙스 — z 깊이 비례 속도
-      tile(spr.skyline, scroll * 0.15, groundY - 150 * sc, 150 * sc, W);
-      tile(spr.hills, scroll * 0.35, groundY - 88 * sc, 90 * sc, W);
-      tile(spr.ground, scroll, groundY, 70 * sc, W);
+      tile(back.skyline, scroll * 0.15, groundY - 150 * sc, 150 * sc, W);
+      tile(back.hills, scroll * 0.35, groundY - 88 * sc, 90 * sc, W);
+      tile(back.ground, scroll, groundY, 70 * sc, W);
       // 지면 아래 마감 (컨트롤 뒤 영역)
-      ctx.fillStyle = '#0F1226';
+      ctx.fillStyle = back.underFill;
       ctx.fillRect(0, groundY + 70 * sc, W, Math.max(H - groundY - 70 * sc, 0));
 
       // 달리기 먼지
@@ -206,7 +217,7 @@ export default memo(function RunnerScene({ hp, maxHp, correct, miss, skin = 'cla
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [skin]);
+  }, [skin, theme]);
 
   return (
     <canvas
