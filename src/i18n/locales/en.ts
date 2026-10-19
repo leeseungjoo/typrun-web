@@ -590,7 +590,7 @@ export const en: Resources = {
     faq1Q: 'Do students need accounts?',
     faq1A: 'No. Students open the class link and enter a number or nickname. Only the teacher who creates the class signs in.',
     faq2Q: 'How many students per class?',
-    faq2A: 'There is no limit. The leaderboard shows the top 30, and the CSV holds up to 100 students.',
+    faq2A: 'Up to 200 students can join one class. The leaderboard shows the top 30, and the CSV includes every student who took part.',
     faq3Q: 'Does it cost anything?',
     faq3A: 'It is free.',
     faq4Q: 'Can I stop the class?',
