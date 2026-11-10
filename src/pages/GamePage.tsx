@@ -293,8 +293,9 @@ export default function GamePage() {
         const cat = cats.find((c) => c.seq === Number(categorySeq));
         setCatInfo(cat ?? null);
         const superBeginner = cat?.is_super_beginner === 'Y';
-        // 생초보도 비랭킹(연습) 모드에 포함
-        const practice = superBeginner || cat?.is_ranking_league === 'N';
+        // 연습(랭킹 미집계) 여부는 is_ranking_league 로만 정한다.
+        // 생초보 속도 + 랭킹 리그(Y/Y) = 초보리그: 천천히 내려오되 점수는 랭킹에 집계된다.
+        const practice = cat?.is_ranking_league === 'N';
         setIsSuperBeginner(superBeginner);
         setIsPractice(practice);
         setHp(superBeginner ? SUPER_INITIAL_HP : practice ? PRACTICE_INITIAL_HP : INITIAL_HP);
