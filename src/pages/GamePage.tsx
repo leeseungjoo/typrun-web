@@ -66,6 +66,8 @@ const PRACTICE_INITIAL_HP = 5;        // 연습 리그는 생명 5개로 시작
 const SUPER_SPAWN_MUL = 5.0;   // 리젠 간격 ×5 → 시작 약 10초 / 후반 약 3.5초 (덜 자주)
 // 낙하 속도는 연습 리그와 같게(0.6) — 0.3 은 화면을 내려오는 데 80초라 너무 느렸다(2026-11-11). 쉬움은 리젠 간격으로 낸다
 const SUPER_SPEED_MUL = PRACTICE_SPEED_MUL;
+// 생초보: 화면이 비면 리젠 간격(최대 10초)을 기다리지 않고 곧바로 다음 단어를 낸다. 터지는 연출이 보일 만큼만 쉰다
+const SUPER_EMPTY_RESPAWN_MS = 300;
 const SUPER_INITIAL_HP = 5;           // 생초보도 생명 5개
 const INITIAL_HP = 5;
 const MAX_HP = 8;
@@ -347,6 +349,7 @@ export default function GamePage() {
     let raf = 0;
     let last = performance.now();
     let spawnAcc = Infinity; // 시작하자마자 첫 단어 즉시 스폰 (첫 프레임에서 바로 발동)
+    let emptyAcc = 0;        // 화면에 단어가 하나도 없는 채로 흐른 시간(ms)
     let tAcc = 0;
     let effectsTickAcc = 0;
 
@@ -417,8 +420,12 @@ export default function GamePage() {
         return next;
       });
 
-      if (spawnAcc >= spawnMs) {
+      // 생초보: 화면이 빈 채로 잠깐 지나면 리젠 간격과 무관하게 바로 한 단어를 낸다
+      emptyAcc = activeRef.current.length === 0 ? emptyAcc + dt * 1000 : 0;
+      const isEmptyRespawn = isSuperBeginner && emptyAcc >= SUPER_EMPTY_RESPAWN_MS;
+      if (spawnAcc >= spawnMs || isEmptyRespawn) {
         spawnAcc = 0;
+        emptyAcc = 0;
         spawnOne(baseSpeed);
       }
 
