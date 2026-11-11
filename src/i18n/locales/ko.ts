@@ -490,7 +490,7 @@ export const ko = {
     errorPrefix: '에러: {{msg}}',
     chooseLeague: '← 리그 선택',
     loadingWordPool: '단어 풀 불러오는 중...',
-    superBeginnerBanner: '🐣 생초보 모드 · 아주 천천히 · 단어도 드물게 · 생명 5개 · 글자 위치부터 천천히!',
+    superBeginnerBanner: '🐣 생초보 모드 · 천천히 · 단어도 드물게 · 생명 5개 · 글자 위치부터 천천히!',
     practiceBanner: '🌱 연습 리그 · 천천히 떨어져요 · 생명 5개 · 랭킹 미집계',
     autoStartCountdown: '초 후 자동 시작!',
     mute: '음소거',

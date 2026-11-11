@@ -62,9 +62,10 @@ const SUPER_GAME_DURATION = 300; // 생초보: 5분 (천천히 충분히 연습)
 const PRACTICE_SPAWN_MUL = 2.0 / 1.5; // ≈1.333 (기존 2.0 → 리젠 1.5배 빠르게, 간격 짧아짐)
 const PRACTICE_SPEED_MUL = 0.6;       // 낙하 속도 0.6배 (천천히)
 const PRACTICE_INITIAL_HP = 5;        // 연습 리그는 생명 5개로 시작
-// 생초보 모드(is_super_beginner='Y') — 아이용, 아주 천천히 + 한 번에 1~2개만
+// 생초보 모드(is_super_beginner='Y') — 아이용, 천천히 + 한 번에 1~2개만
 const SUPER_SPAWN_MUL = 5.0;   // 리젠 간격 ×5 → 시작 약 10초 / 후반 약 3.5초 (덜 자주)
-const SUPER_SPEED_MUL = PRACTICE_SPEED_MUL * 0.5; // 0.3 (낙하 속도 절반)
+// 낙하 속도는 연습 리그와 같게(0.6) — 0.3 은 화면을 내려오는 데 80초라 너무 느렸다(2026-11-11). 쉬움은 리젠 간격으로 낸다
+const SUPER_SPEED_MUL = PRACTICE_SPEED_MUL;
 const SUPER_INITIAL_HP = 5;           // 생초보도 생명 5개
 const INITIAL_HP = 5;
 const MAX_HP = 8;
@@ -73,6 +74,9 @@ const SPAWN_MS_MIN = 700;
 const SPEED_START = 4.4;   // 5.3 / 1.2
 const SPEED_MAX = 10;      // 12 / 1.2
 const BOTTOM_Y = 105; // 단어가 죽는 위치(%) — 글자가 화면 밖으로 완전히 나간 뒤 미스
+// 단어가 태어나는 위치 — 상단 HUD(dim+blur 바) 바로 아래. HUD 뒤에서 시작하면 글자가 흐려져 안 읽힌다
+const SPAWN_GAP_PX = 16;      // HUD 아랫변과 단어 사이 여백(아이템 '?' 배지가 위로 12px 튀어나옴)
+const SPAWN_Y_FALLBACK = 8;   // HUD 높이를 못 잰 경우의 시작 위치(%)
 const HIT_TOAST_MS = 1500;
 const WORDS_LIMIT = 1000;
 const COMBO_TIMEOUT_MS = 4000;
@@ -172,6 +176,15 @@ export default function GamePage() {
     el.style.animation = 'none';
     void el.offsetWidth; // 리플로우 → 애니메이션 재시작
     el.style.animation = 'gamePunch 130ms ease-out';
+  };
+
+  // 낙하 시작 위치(% from top) — HUD 실제 높이를 재서 그 바로 아래. 모바일에서 HUD 가 두꺼워져도 따라간다
+  const hudRef = useRef<HTMLDivElement>(null);
+  const spawnTopPct = (): number => {
+    const hudH = hudRef.current?.offsetHeight ?? 0;
+    const fieldH = punchRef.current?.clientHeight ?? 0;
+    if (hudH === 0 || fieldH === 0) return SPAWN_Y_FALLBACK;
+    return ((hudH + SPAWN_GAP_PX) / fieldH) * 100;
   };
 
   const [words, setWords] = useState<Word[]>([]);
@@ -346,7 +359,7 @@ export default function GamePage() {
           id: newId(),
           word: w,
           x: 10 + Math.random() * 80,
-          y: 0,
+          y: spawnTopPct(),
           speed,
           item: withItem ? randomItemDef() : undefined,
         },
@@ -707,13 +720,14 @@ export default function GamePage() {
         const speed = (SPEED_START + (SPEED_MAX - SPEED_START) * p)
           * (isSuperBeginner ? SUPER_SPEED_MUL : isPractice ? PRACTICE_SPEED_MUL : 1);
         const fresh: ActiveWord[] = [];
+        const spawnY = spawnTopPct();
         for (let i = 0; i < WORD_BURST_COUNT; i++) {
           const w = words[Math.floor(Math.random() * words.length)];
           fresh.push({
             id: newId(),
             word: w,
             x: 10 + Math.random() * 80,
-            y: 0,
+            y: spawnY,
             speed,
           });
         }
@@ -812,7 +826,7 @@ export default function GamePage() {
       onPointerDown={() => inputRef.current?.focus()}
     >
       {/* HUD — 상단 오버레이 */}
-      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm">
+      <div ref={hudRef} className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <span className="text-xl tracking-wider">
             {'❤'.repeat(hp)}

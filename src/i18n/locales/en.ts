@@ -492,7 +492,7 @@ export const en: Resources = {
     errorPrefix: 'Error: {{msg}}',
     chooseLeague: '← Choose league',
     loadingWordPool: 'Loading word pool...',
-    superBeginnerBanner: '🐣 Beginner mode · very slow · words appear rarely · 5 lives · ease into letter positions!',
+    superBeginnerBanner: '🐣 Beginner mode · slow · words appear rarely · 5 lives · ease into letter positions!',
     practiceBanner: '🌱 Practice league · words fall slowly · 5 lives · not ranked',
     autoStartCountdown: 's until auto-start!',
     mute: 'Mute',
