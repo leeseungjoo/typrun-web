@@ -1137,14 +1137,14 @@ export default function GamePage() {
                 </motion.div>
               )}
               <div
-                className={`${isHeist ? 'px-3 py-1.5' : 'px-4 py-2'} rounded-lg backdrop-blur border ${
+                className={`px-4 py-2 rounded-lg backdrop-blur border ${
                   a.item
                     ? 'bg-yellow-400/10 border-yellow-400/60 shadow-[0_0_20px_rgba(250,200,0,0.3)]'
                     : 'bg-white/10 border-white/20'
                 }`}
               >
-                {/* 도둑 런: 글자를 70% 크기로(2026-11-17 사장) — 그림 크기만 바뀌고 판정·낙하 속도는 그대로 */}
-                <div className={`font-bold ${isHeist ? 'text-[21px] leading-7' : 'text-3xl'}`}>{a.word.word}</div>
+                {/* 낙하 글자 크기는 모든 테마 공통 30px. 2026-11-17 도둑 런만 70%(21px)로 줄였다가 운영 화면에서 너무 작아 같은 날 되돌림 */}
+                <div className="text-3xl font-bold">{a.word.word}</div>
               </div>
             </motion.div>
           ))}
