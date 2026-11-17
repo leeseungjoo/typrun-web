@@ -23,6 +23,9 @@ import { fileURLToPath } from 'node:url';
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const ORIGIN = 'https://typrun.com';
 const BUILD_DATE = new Date().toISOString().slice(0, 10);
+// 공유 미리보기 그림(1200x630) — 페이지 언어별 문구판. 셸(index.html)·app.html 폴백은 글자 없는 중립판
+// (app.html 은 /kr/class/… 같은 한국어 링크와 영문 링크가 함께 쓰므로). 그림을 바꿀 땐 파일 이름도 바꿔 공유 캐시를 피한다.
+const OG_IMAGE = { ko: `${ORIGIN}/og/typrun-heist-ko.jpg`, en: `${ORIGIN}/og/typrun-heist-en.jpg` };
 
 const OPERATOR_FOOTER_KO =
   '<a href="/kr/school">선생님용 교실 모드</a> · ' +
@@ -573,6 +576,9 @@ function renderPage(shell, page) {
     'twitter:description',
     o,
   );
+  const ogImage = OG_IMAGE[page.lang] ?? OG_IMAGE.en;
+  html = replaceOnce(html, /<meta property="og:image" content="[^"]*" \/>/, `<meta property="og:image" content="${ogImage}" />`, 'og:image', o);
+  html = replaceOnce(html, /<meta name="twitter:image" content="[^"]*" \/>/, `<meta name="twitter:image" content="${ogImage}" />`, 'twitter:image', o);
   html = replaceOnce(
     html,
     /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
