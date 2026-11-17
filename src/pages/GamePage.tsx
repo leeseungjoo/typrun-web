@@ -4,10 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { api } from '../api/client';
 import { sound } from '../lib/sound';
+import { chipBgm } from '../lib/chipBgm';
 import { clearScore, tierFactor } from '../lib/score';
 import { useAuth } from '../contexts/AuthContext';
 import { useVisualViewportBox } from '../hooks/useKeyboardInset';
 import RunnerScene from '../components/game/RunnerScene';
+import HeistScene from '../components/game/heist/HeistScene';
+import HeistDemoScene from '../components/heist/HeistDemoScene';
+import { castForLeague, parseCast, rememberCast } from '../components/game/heist/heistCast';
+import HeistHud from '../components/game/heist/HeistHud';
+import HeistControls from '../components/game/heist/HeistControls';
+import HeistItemIcon from '../components/game/heist/HeistItemIcon';
+import { SITE_THEME } from '../lib/theme';
 import { getStoredSkin } from '../components/game/runnerAssets';
 import { track } from '../lib/track';
 import { loadClassCtx, randomId, type ClassGameResult } from '../lib/classroomCtx';
@@ -79,6 +87,13 @@ const BOTTOM_Y = 105; // 단어가 죽는 위치(%) — 글자가 화면 밖으�
 // 단어가 태어나는 위치 — 상단 HUD(dim+blur 바) 바로 아래. HUD 뒤에서 시작하면 글자가 흐려져 안 읽힌다
 const SPAWN_GAP_PX = 16;      // HUD 아랫변과 단어 사이 여백(아이템 '?' 배지가 위로 12px 튀어나옴)
 const SPAWN_Y_FALLBACK = 8;   // HUD 높이를 못 잰 경우의 시작 위치(%)
+// 도둑 런 표시줄(2줄)은 기존 한 줄 바보다 두껍다. 그 높이로 시작점을 잡으면 단어가 떨어질 거리가 줄어
+// 난이도가 달라진다(1080p 에서 낙하 시간 약 10% 감소). 규칙을 그대로 두기 위해 기존 한 줄 바의 실측 높이로 계산한다.
+// 2026-11-17 실측: 폭 400px 이상 65px, 미만은 줄바꿈으로 81px.
+const LEGACY_HUD_PX = 65;
+const LEGACY_HUD_NARROW_PX = 81;
+const LEGACY_HUD_WRAP_WIDTH = 400;
+const HEIST_WORD_FRONT_UNTIL = 18; // 이 높이(%)까지는 단어를 표시줄 앞에 그린다 — 표시줄에 가려 안 읽히는 구간
 const HIT_TOAST_MS = 1500;
 const WORDS_LIMIT = 1000;
 const COMBO_TIMEOUT_MS = 4000;
@@ -155,6 +170,9 @@ export default function GamePage() {
     return ctx && ctx.categorySeq === Number(categorySeq) ? ctx : null;
   }, [stateClassCode, categorySeq]);
   const exitPath = classCtx ? `/class/${classCtx.code}` : '/league'; // 그만두기·뒤로가기 목적지
+  // 도둑 런 화면(올리브영 구도) — 교실 모드 게임은 항상 칠판이라 제외
+  const isHeist = SITE_THEME === 'heist' && !classCtx;
+  const speedFillRef = useRef<HTMLDivElement>(null); // 속도 게이지 — HeistScene 이 직접 갱신
   const vvBox = useVisualViewportBox(); // 모바일 키보드 올라온 만큼 게임 화면을 '보이는 영역'으로 고정(낙하 시작점이 화면 밖으로 안 나가게)
   const [eventTitle, setEventTitle] = useState<string | null>(null);
   // 활성 친구추천 이벤트 → 게임화면 랭크확인(초대) 버튼
@@ -183,7 +201,9 @@ export default function GamePage() {
   // 낙하 시작 위치(% from top) — HUD 실제 높이를 재서 그 바로 아래. 모바일에서 HUD 가 두꺼워져도 따라간다
   const hudRef = useRef<HTMLDivElement>(null);
   const spawnTopPct = (): number => {
-    const hudH = hudRef.current?.offsetHeight ?? 0;
+    const hudH = isHeist
+      ? (window.innerWidth < LEGACY_HUD_WRAP_WIDTH ? LEGACY_HUD_NARROW_PX : LEGACY_HUD_PX)
+      : hudRef.current?.offsetHeight ?? 0;
     const fieldH = punchRef.current?.clientHeight ?? 0;
     if (hudH === 0 || fieldH === 0) return SPAWN_Y_FALLBACK;
     return ((hudH + SPAWN_GAP_PX) / fieldH) * 100;
@@ -278,6 +298,20 @@ export default function GamePage() {
   // 사운드 프리로드
   useEffect(() => { sound.preload(); }, []);
 
+  // 캐릭터 쌍 — 리그에 따라 도둑·학생·병아리·신부(heistCast.ts). 주소에 ?cast=bride 처럼 붙이면 그 쌍으로 미리 볼 수 있다.
+  // 종료화면이 같은 캐릭터를 이어 보여 주도록 기억해 둔다. 그림만 바뀌고 게임 규칙은 같다.
+  const cast = parseCast(new URLSearchParams(loc.search).get('cast')) ?? castForLeague(catInfo?.code);
+  useEffect(() => {
+    if (isHeist && catInfo) rememberCast(cast);
+  }, [isHeist, catInfo, cast]);
+
+  // 배경음 — 도둑 런 게임 중에만 흐른다(교실 모드는 한 반이 동시에 치므로 넣지 않는다). 끝나거나 나가면 멈춘다
+  useEffect(() => {
+    if (!isHeist || phase !== 'playing') return;
+    chipBgm.start();
+    return () => chipBgm.stop();
+  }, [isHeist, phase]);
+
   // 게임 중: 화면 어디서 키를 눌러도 항상 입력칸으로 포커스 (Enter 포함)
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -286,6 +320,8 @@ export default function GamePage() {
       if (!el || document.activeElement === el) return;
       // 단축키/기능키(F5, Ctrl+C, 새로고침 등)는 가로채지 않음
       if (e.ctrlKey || e.altKey || e.metaKey) return;
+      // 소리 조절 판 안에서 누른 키(슬라이더 화살표·Esc)도 가로채지 않는다 — 판이 조작 끝에 포커스를 돌려준다
+      if (e.target instanceof Element && e.target.closest('.heist-sound-panel')) return;
       el.focus();
     };
     window.addEventListener('keydown', refocus);
@@ -781,8 +817,19 @@ export default function GamePage() {
 
   if (phase === 'ready') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
-        {catInfo && <h2 className="text-3xl font-bold">{catInfo.name}</h2>}
+      <div className={`min-h-screen flex flex-col items-center px-6 gap-4 ${isHeist ? 'justify-start pt-[clamp(28px,10dvh,120px)]' : 'justify-center'}`}>
+        {/* 도둑 런: 출발 전에도 달리는 장면을 깐다(게임이 시작되면 게임 화면의 씬으로 바뀐다). 교실 모드는 칠판 화면 그대로.
+            안내는 박스 없이 글자만 위쪽 하늘에 둔다(2026-11-17 사장: 박스는 필요 없다, 심플하게) — 가운데의 달리는 도둑을 가리지 않는다 */}
+        {isHeist && (
+          <div className="fixed inset-0 -z-[5]" aria-hidden>
+            <HeistDemoScene mood="ready" cast={cast} />
+          </div>
+        )}
+        {catInfo && (
+          <h2 className={isHeist ? 'text-3xl md:text-4xl font-black text-center [word-break:keep-all] drop-shadow-[0_3px_0_rgba(5,7,11,0.7)]' : 'text-3xl font-bold'}>
+            {catInfo.name}
+          </h2>
+        )}
         {(catInfo?.event_title || catInfo?.event_body) && (
           <div className="w-full max-w-md rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-center">
             {catInfo.event_title && (
@@ -806,12 +853,12 @@ export default function GamePage() {
           </div>
         )}
         <div className="flex flex-col items-center gap-1" role="status" aria-live="polite">
-          <span className="text-7xl font-impact text-violet-200 tabular-nums leading-none" aria-hidden>
+          <span className={`font-impact tabular-nums leading-none ${isHeist ? 'text-8xl md:text-9xl text-amber-300 drop-shadow-[0_5px_0_rgba(5,7,11,0.7)]' : 'text-7xl text-violet-200'}`} aria-hidden>
             {readyCountdown ?? 5}
           </span>
-          <span className="text-sm text-white/60">{t('game.autoStartCountdown')}</span>
+          <span className={isHeist ? 'text-sm font-semibold text-white/85 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : 'text-sm text-white/60'}>{t('game.autoStartCountdown')}</span>
         </div>
-        <button className="btn-ghost text-sm" onClick={() => nav(exitPath)}>
+        <button className={`btn-ghost text-sm${isHeist ? ' bg-[rgba(11,16,38,0.6)]' : ''}`} onClick={() => nav(exitPath)}>
           {classCtx ? t('classroom.backToClass') : t('game.chooseLeague')}
         </button>
       </div>
@@ -822,17 +869,145 @@ export default function GamePage() {
   const timeLeft = Math.max(0, Math.ceil(gameDuration + bonusTime - elapsed));
   const comboMul = combo > 0 ? combo * tierFactor(combo) : 0;
 
+  // 입력칸 — 두 레이아웃(기존·도둑 런)이 같은 요소를 쓴다. 보안 핸들러(음성·붙여넣기·매크로 차단)는 한 곳에만 둔다
+  const inputEl = (
+    <input
+      ref={inputRef}
+      aria-label={t('game.inputLabel')}
+      autoFocus
+      // 음성받아쓰기/자동완성/자동수정 비활성화
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      value={input}
+      // 한글 IME 조합 상태 추적 (조합 중 입력은 정상 입력으로 허용)
+      onCompositionStart={() => { isComposingRef.current = true; }}
+      onCompositionEnd={() => { isComposingRef.current = false; }}
+      // 붙여넣기 / 드래그앤드롭 차단 (매크로·음성→붙여넣기 경로 차단)
+      onPaste={(e) => { e.preventDefault(); flashInputWarn(); }}
+      onDrop={(e) => { e.preventDefault(); flashInputWarn(); }}
+      onChange={(e) => {
+        const v = e.target.value;
+        const native = e.nativeEvent as InputEvent;
+        const inputType = (native?.inputType || '').toLowerCase();
+        const grew = v.length - input.length;
+
+        // 삭제/이동(길이 감소·동일)은 항상 허용
+        if (grew <= 0) { setInput(v); return; }
+
+        // IME 조합 중이거나 조합 입력 이벤트면 정상 입력으로 허용
+        const composing = isComposingRef.current || inputType.includes('composition');
+
+        // 비키보드 삽입 차단: 붙여넣기·드롭·음성받아쓰기/자동완성 대체 텍스트
+        const blocked = ['insertfrompaste', 'insertfromdrop', 'insertreplacementtext'];
+        if (!composing && blocked.includes(inputType)) {
+          flashInputWarn();
+          return;
+        }
+
+        // 한 번에 2글자 이상 삽입 = 비정상(음성/매크로). IME 조합은 예외.
+        if (grew > 1 && !composing) {
+          flashInputWarn();
+          return;
+        }
+
+        // 키 입력 흔적이 없는 삽입(프로그램 주입·일부 음성입력) 차단. IME 조합은 예외.
+        if (!sawTrustedKeyRef.current && !composing) {
+          flashInputWarn();
+          return;
+        }
+
+        sawTrustedKeyRef.current = false;
+        // 스페이스를 엔터처럼 제출로 취급. 단 공백 포함 단어(영화 제목·명언 등) 보호:
+        // - 생초보(공백 없는 단어 전제): 스페이스 무조건 제출(넘김)
+        // - 그 외: trim 값이 활성 단어와 정확히 매칭될 때만 제출, 아니면 공백 유지(공백 단어 입력 중)
+        if (/\s/.test(v)) {
+          if (isSuperBeginner) {
+            onSubmitInput(v);
+            return;
+          }
+          const t = v.trim().toLowerCase();
+          // 같은 접두로 시작하는 공백 단어(예: "영화 제목")가 활성 중이면 제출 보류 → 그 단어 완성 가능
+          const exact = !!t && activeRef.current.some((a) => a.word.word.toLowerCase() === t);
+          const prefixOfSpaceWord = !!t && activeRef.current.some((a) => a.word.word.toLowerCase().startsWith(`${t} `));
+          if (exact && !prefixOfSpaceWord) {
+            onSubmitInput(v);
+            return;
+          }
+          // 매칭 실패(또는 공백 단어 접두) → 공백 유지하고 계속 입력
+        }
+        setInput(v);
+      }}
+      onKeyDown={(e) => {
+        // 신뢰된(사람) 키 입력만 기록 — JS로 주입된 합성 이벤트(isTrusted=false)는 무시 → 매크로 차단
+        if (e.isTrusted) sawTrustedKeyRef.current = true;
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onSubmitInput();
+          return;
+        }
+        // 1~5 키 → 인벤토리 슬롯 사용 (해당 슬롯에 아이템 있을 때만)
+        if (/^[1-5]$/.test(e.key)) {
+          const idx = parseInt(e.key, 10) - 1;
+          if (inventoryRef.current[idx]) {
+            e.preventDefault();
+            useItemAt(idx);
+          }
+        }
+      }}
+      placeholder={isSuperBeginner
+        ? t('game.inputPlaceholderSuper')
+        : t('game.inputPlaceholder')}
+      className={
+        isHeist
+          ? `heist-input${inputWarn ? ' is-warn' : ''}`
+          : `w-1/2 px-4 py-3 rounded-xl bg-white/10 border text-center outline-none transition-colors ${
+              inputWarn ? 'border-red-500/80 focus:border-red-500/80' : 'border-white/20 focus:border-white/50'
+            }`
+      }
+      style={isHeist ? undefined : { fontSize: '1.35rem' }}
+    />
+  );
+
   return (
     // 보이는 시각 뷰포트에 딱 맞게 고정 — 키보드가 올라오면 그만큼 줄어들어 낙하 시작점(상단)·입력칸이 모두 화면 안.
     // visualViewport 미지원/데스크톱은 100dvh 풀스크린(동일 동작).
     <div
       ref={punchRef}
-      className="fixed inset-x-0 overflow-hidden"
+      className={`fixed inset-x-0 overflow-hidden${isHeist ? ' heist-stage' : ''}`}
       style={{ top: vvBox?.top ?? 0, height: vvBox ? vvBox.height : '100dvh' }}
       // 모바일 포커스 캐처: 화면 아무 데나 탭하면 입력칸 재포커스 → 키보드 닫혀도 제스처 내 focus 로 다시 올림(데스크톱은 무해).
       onPointerDown={() => inputRef.current?.focus()}
     >
-      {/* HUD — 상단 오버레이 */}
+      {/* HUD — 상단 오버레이. 도둑 런은 올리브영 구도(2줄), 그 외는 기존 한 줄 바 */}
+      {isHeist ? (
+        <HeistHud
+          rootRef={hudRef}
+          speedFillRef={speedFillRef}
+          title={catInfo?.name ?? ''}
+          timeLeft={timeLeft}
+          bonusTime={bonusTime}
+          score={score}
+          combo={combo}
+          comboMul={comboMul}
+          hp={hp}
+          maxHp={MAX_HP}
+          shields={shields}
+          muted={muted}
+          onHome={() => goWithConfirm(exitPath)}
+          onToggleMute={() => {
+            const next = !muted;
+            sound.setMuted(next);
+            setMuted(next);
+          }}
+          onSoundMenuDone={() => inputRef.current?.focus()}
+          userLabel={user ? user.nickname : t('game.login')}
+          onUser={() => goWithConfirm(user ? '/profile' : '/login')}
+          eventLabel={eventTitle}
+          onEvent={() => goWithConfirm('/insider')}
+        />
+      ) : (
       <div ref={hudRef} className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <span className="text-xl tracking-wider">
@@ -884,22 +1059,31 @@ export default function GamePage() {
           </button>
         </div>
       </div>
+      )}
 
 
       {/* PlayField — 화면 전체, 단어가 끝까지 떨어져 화면 밖에서 죽음 */}
       <div className="absolute inset-0">
         {/* 러너 씬 — 판정 무관 그림 레이어(캔버스). 정답/미스/HP 를 읽기만 함. 스킨은 회원 보상 */}
-        <RunnerScene
-          hp={hp}
-          maxHp={MAX_HP}
-          correct={correct}
-          miss={miss}
-          skin={user ? getStoredSkin() : 'classic'}
-          theme={classCtx ? 'classroom' : 'default'}
-        />
+        {isHeist ? (
+          <HeistScene hp={hp} maxHp={MAX_HP} correct={correct} miss={miss} combo={combo} bursts={bursts} speedFillRef={speedFillRef} hasSound cast={cast} />
+        ) : (
+          <RunnerScene
+            hp={hp}
+            maxHp={MAX_HP}
+            correct={correct}
+            miss={miss}
+            skin={user ? getStoredSkin() : 'classic'}
+            theme={classCtx ? 'classroom' : 'default'}
+          />
+        )}
         {/* 활성 효과 배너 (상단 중앙) */}
         {effects.length > 0 && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none">
+          <div
+            className="absolute top-16 left-1/2 -translate-x-1/2 flex gap-2 z-40 pointer-events-none"
+            // 도둑 런 표시줄은 2줄이라 그 아래로 내린다
+            style={isHeist ? { top: 'calc(var(--u) * 196)' } : undefined}
+          >
             {effects.map((e) => {
               const remain = Math.max(0, (e.endsAt - performance.now()) / 1000);
               const def = ITEM_POOL.find((i) => i.effect === e.effect)!;
@@ -915,7 +1099,7 @@ export default function GamePage() {
                   key={e.id}
                   className={`px-3 py-1.5 rounded-full border backdrop-blur text-sm font-bold flex items-center gap-1.5 ${style}`}
                 >
-                  <span className="text-base">{def.icon}</span>
+                  {isHeist ? <HeistItemIcon effect={def.effect} className="w-6 h-6 object-contain" /> : <span className="text-base">{def.icon}</span>}
                   <span>{def.name}</span>
                   <span className="text-xs opacity-80 tabular-nums">{remain.toFixed(1)}s</span>
                 </div>
@@ -935,7 +1119,7 @@ export default function GamePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5, y: -20 }}
               transition={{ duration: 0.15 }}
-              className="absolute -translate-x-1/2 select-none pointer-events-none transition-[filter] duration-200"
+              className={`absolute -translate-x-1/2 select-none pointer-events-none transition-[filter] duration-200${isHeist && a.y < HEIST_WORD_FRONT_UNTIL ? ' z-30' : ''}`}
               style={{
                 left: `${a.x}%`,
                 top: `${a.y}%`,
@@ -953,13 +1137,14 @@ export default function GamePage() {
                 </motion.div>
               )}
               <div
-                className={`px-4 py-2 rounded-lg backdrop-blur border ${
+                className={`${isHeist ? 'px-3 py-1.5' : 'px-4 py-2'} rounded-lg backdrop-blur border ${
                   a.item
                     ? 'bg-yellow-400/10 border-yellow-400/60 shadow-[0_0_20px_rgba(250,200,0,0.3)]'
                     : 'bg-white/10 border-white/20'
                 }`}
               >
-                <div className="text-3xl font-bold">{a.word.word}</div>
+                {/* 도둑 런: 글자를 70% 크기로(2026-11-17 사장) — 그림 크기만 바뀌고 판정·낙하 속도는 그대로 */}
+                <div className={`font-bold ${isHeist ? 'text-[21px] leading-7' : 'text-3xl'}`}>{a.word.word}</div>
               </div>
             </motion.div>
           ))}
@@ -1008,7 +1193,8 @@ export default function GamePage() {
               initial={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
+              // 도둑 런은 캐릭터가 화면 정중앙이라 콤보 글자를 위로 올려 가리지 않게 한다
+              className={`absolute inset-0 flex justify-center pointer-events-none z-30 ${isHeist ? 'items-start pt-[20vh]' : 'items-center'}`}
             >
               {/* 빛 폭발 (radial flash) */}
               <motion.div
@@ -1066,6 +1252,19 @@ export default function GamePage() {
       {hp <= 2 && hp > 0 && <div className="absolute inset-0 pointer-events-none z-10 crisis-vignette" aria-hidden />}
 
       {/* 하단 컨트롤 — 화면 하단 오버레이 (단어는 이 뒤로 떨어져 화면 밖에서 미스) */}
+      {isHeist ? (
+        <HeistControls
+          inventory={inventory}
+          onUseItem={useItemAt}
+          hit={lastHit ? { id: lastHit.id, word: lastHit.word.word, meaning: lastHit.word.meaning?.trim() || undefined } : null}
+          idleLabel={catInfo?.name ?? ''}
+          pickedItem={lastItem}
+          warnText={inputWarn ? t('game.inputWarn') : null}
+          onEnter={() => onSubmitInput()}
+        >
+          {inputEl}
+        </HeistControls>
+      ) : (
       <div className="absolute bottom-0 inset-x-0 z-20">
       {/* Hit toast (키보드 위 뜻 표시) */}
       <div className="relative h-12 px-6">
@@ -1195,98 +1394,7 @@ export default function GamePage() {
             {user ? `👤 ${user.nickname}` : t('game.login')}
           </button>
         )}
-        <input
-          ref={inputRef}
-          autoFocus
-          // 음성받아쓰기/자동완성/자동수정 비활성화
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          value={input}
-          // 한글 IME 조합 상태 추적 (조합 중 입력은 정상 입력으로 허용)
-          onCompositionStart={() => { isComposingRef.current = true; }}
-          onCompositionEnd={() => { isComposingRef.current = false; }}
-          // 붙여넣기 / 드래그앤드롭 차단 (매크로·음성→붙여넣기 경로 차단)
-          onPaste={(e) => { e.preventDefault(); flashInputWarn(); }}
-          onDrop={(e) => { e.preventDefault(); flashInputWarn(); }}
-          onChange={(e) => {
-            const v = e.target.value;
-            const native = e.nativeEvent as InputEvent;
-            const inputType = (native?.inputType || '').toLowerCase();
-            const grew = v.length - input.length;
-
-            // 삭제/이동(길이 감소·동일)은 항상 허용
-            if (grew <= 0) { setInput(v); return; }
-
-            // IME 조합 중이거나 조합 입력 이벤트면 정상 입력으로 허용
-            const composing = isComposingRef.current || inputType.includes('composition');
-
-            // 비키보드 삽입 차단: 붙여넣기·드롭·음성받아쓰기/자동완성 대체 텍스트
-            const blocked = ['insertfrompaste', 'insertfromdrop', 'insertreplacementtext'];
-            if (!composing && blocked.includes(inputType)) {
-              flashInputWarn();
-              return;
-            }
-
-            // 한 번에 2글자 이상 삽입 = 비정상(음성/매크로). IME 조합은 예외.
-            if (grew > 1 && !composing) {
-              flashInputWarn();
-              return;
-            }
-
-            // 키 입력 흔적이 없는 삽입(프로그램 주입·일부 음성입력) 차단. IME 조합은 예외.
-            if (!sawTrustedKeyRef.current && !composing) {
-              flashInputWarn();
-              return;
-            }
-
-            sawTrustedKeyRef.current = false;
-            // 스페이스를 엔터처럼 제출로 취급. 단 공백 포함 단어(영화 제목·명언 등) 보호:
-            // - 생초보(공백 없는 단어 전제): 스페이스 무조건 제출(넘김)
-            // - 그 외: trim 값이 활성 단어와 정확히 매칭될 때만 제출, 아니면 공백 유지(공백 단어 입력 중)
-            if (/\s/.test(v)) {
-              if (isSuperBeginner) {
-                onSubmitInput(v);
-                return;
-              }
-              const t = v.trim().toLowerCase();
-              // 같은 접두로 시작하는 공백 단어(예: "영화 제목")가 활성 중이면 제출 보류 → 그 단어 완성 가능
-              const exact = !!t && activeRef.current.some((a) => a.word.word.toLowerCase() === t);
-              const prefixOfSpaceWord = !!t && activeRef.current.some((a) => a.word.word.toLowerCase().startsWith(`${t} `));
-              if (exact && !prefixOfSpaceWord) {
-                onSubmitInput(v);
-                return;
-              }
-              // 매칭 실패(또는 공백 단어 접두) → 공백 유지하고 계속 입력
-            }
-            setInput(v);
-          }}
-          onKeyDown={(e) => {
-            // 신뢰된(사람) 키 입력만 기록 — JS로 주입된 합성 이벤트(isTrusted=false)는 무시 → 매크로 차단
-            if (e.isTrusted) sawTrustedKeyRef.current = true;
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onSubmitInput();
-              return;
-            }
-            // 1~5 키 → 인벤토리 슬롯 사용 (해당 슬롯에 아이템 있을 때만)
-            if (/^[1-5]$/.test(e.key)) {
-              const idx = parseInt(e.key, 10) - 1;
-              if (inventoryRef.current[idx]) {
-                e.preventDefault();
-                useItemAt(idx);
-              }
-            }
-          }}
-          placeholder={isSuperBeginner
-            ? t('game.inputPlaceholderSuper')
-            : t('game.inputPlaceholder')}
-          className={`w-1/2 px-4 py-3 rounded-xl bg-white/10 border text-center outline-none transition-colors ${
-            inputWarn ? 'border-red-500/80 focus:border-red-500/80' : 'border-white/20 focus:border-white/50'
-          }`}
-          style={{ fontSize: '1.35rem' }}
-        />
+        {inputEl}
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
@@ -1310,6 +1418,7 @@ export default function GamePage() {
         )}
       </div>
       </div>
+      )}
     </div>
   );
 }

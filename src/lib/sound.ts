@@ -45,8 +45,9 @@ let masterVolume = (() => {
 })();
 
 export const sound = {
-  preload() {
-    (Object.keys(CONFIG) as SfxKey[]).forEach(getAudio);
+  /** 미리 받아 둘 소리. 생략하면 전부(게임 화면), 메뉴 화면은 쓰는 것만 넘긴다(예: ['click']). */
+  preload(keys: readonly SfxKey[] = Object.keys(CONFIG) as SfxKey[]) {
+    keys.forEach(getAudio);
   },
   play(key: SfxKey) {
     if (muted) return;

@@ -5,6 +5,12 @@ import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import BannerSlot from '../components/BannerSlot';
+import HeistPose from '../components/heist/HeistPose';
+import '../components/heist/heistMenu.css';
+import { SITE_THEME } from '../lib/theme';
+import { sound } from '../lib/sound';
+import { heistSfx } from '../lib/heistSfx';
+import { readLastCast } from '../components/game/heist/heistCast';
 import { SOCIAL_PROVIDERS, startSocialLogin, type SocialProvider } from '../lib/socialLogin';
 import { track } from '../lib/track';
 import type { RankPreview, ScoreSaveResponse } from '../api/types';
@@ -133,46 +139,102 @@ export default function GameOverPage() {
   const accuracyPct = Math.round(result.accuracy * 100);
   const isNewBest = saveRes?.is_new_best;
   const isPractice = result.is_practice ?? false;
+  const isHeist = SITE_THEME === 'heist';
+  // 비회원 로그인 유도 판 — 있으면 넓은 화면에서 결과(왼쪽)·로그인(오른쪽) 두 칸으로 나눈다
+  const hasGuestCta = !isPractice && !authLoading && !user;
+  const pose = isNewBest ? 'cheer' : 'caught';
 
+  // 한 화면에 다 들어오게(스크롤 없이) 배열한다(2026-11-17 사장): 점수·스탯을 한 묶음으로 줄이고,
+  // 세로로 길던 로그인 판은 넓은 화면에선 옆 칸으로, 폰에선 소셜 버튼 3개를 한 줄로 눕힌다.
+  // 도둑 런: 배경이 달리는 장면(HeistBackdrop 의 run)이라 결과는 위쪽 하늘에, 버튼은 맨 아래 바닥 띠에 두고
+  // 그 사이를 비워 쫓기는 도둑이 보이게 한다(다른 테마는 예전처럼 가운데 정렬).
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
-      <motion.h2
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="font-impact text-3xl md:text-4xl tracking-wide text-white/55 mb-2"
-      >
-        GAME OVER
-      </motion.h2>
+    <div
+      className={`min-h-[100dvh] flex flex-col items-center px-4 gap-4 ${
+        isHeist ? 'pt-[clamp(16px,4.5dvh,56px)] pb-[clamp(12px,2.5dvh,28px)]' : 'justify-center py-5 md:gap-6'
+      }`}
+    >
+      <div className={`w-full grid items-center gap-4 md:gap-8 ${hasGuestCta ? 'max-w-4xl md:grid-cols-2' : 'max-w-xl'}`}>
+        {/* 결과: 포즈 → GAME OVER → 점수 → (저장 상태) → 스탯 4칸 */}
+        <section className="flex flex-col items-center min-w-0">
+          {/* 포즈 그림은 세로가 넉넉할 때만 — 낮은 화면에서는 뒤에서 달리는 도둑을 가리지 않게 뺀다 */}
+          {/* 도둑 포즈라 도둑으로 한 판에만 보여 준다(학생·병아리·신부로 한 판은 뒤의 달리는 장면이 그 캐릭터다) */}
+          {isHeist && readLastCast() === 'thief' && (
+            <HeistPose key={pose} pose={pose} className="h-24 md:h-28 [@media(max-height:760px)]:hidden" />
+          )}
+          <motion.h2
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="font-impact text-2xl md:text-3xl tracking-wide text-white/65 mt-2"
+          >
+            GAME OVER
+          </motion.h2>
 
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.1 }}
-        className="font-impact text-7xl md:text-9xl text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.45)]"
-      >
-        {result.score.toLocaleString()}
-      </motion.div>
-      <div className="text-white/40 text-sm mt-1 mb-6">SCORE</div>
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.1 }}
+            className="font-impact text-6xl md:text-7xl leading-none text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.45)]"
+          >
+            {result.score.toLocaleString()}
+          </motion.div>
+          <div className="text-white/50 text-xs mt-1">SCORE</div>
 
-      {/* 저장 상태 / 순위 / 로그인 유도 */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="min-h-[3rem] flex flex-col items-center gap-3 mb-8"
-      >
-        {/* 연습 리그: 랭킹/저장 없이 격려 메시지만 */}
-        {isPractice && (
-          <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm text-center">
-            🌱 {t('gameover.practiceNotice')}
-          </div>
-        )}
+          {/* 연습 리그: 랭킹/저장 없이 격려 메시지만 */}
+          {isPractice && (
+            <div className="mt-3 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-sm text-center [word-break:keep-all]">
+              🌱 {t('gameover.practiceNotice')}
+            </div>
+          )}
+
+          {/* 랭킹 리그 · 로그인 사용자: 저장 상태 표시 */}
+          {!isPractice && user && (
+            <div className="mt-3 min-h-[1.75rem] flex flex-wrap items-center justify-center gap-3" role="status">
+              {saving && <span className="text-white/60 text-sm">{t('gameover.saving')}</span>}
+              {saveErr && <span className="text-red-400 text-sm">{t('gameover.saveFailed', { err: saveErr })}</span>}
+              {saveRes && (
+                <>
+                  {isNewBest && (
+                    <motion.span
+                      initial={{ scale: 0.5, rotate: -8 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                      className="px-3 py-1 rounded-full bg-yellow-400 text-black font-bold text-sm"
+                    >
+                      🏆 NEW BEST
+                    </motion.span>
+                  )}
+                  <span className="text-white/75">
+                    {t('gameover.seasonRank')} <span className="font-bold text-white">#{saveRes.rank_no}</span>
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mt-4 w-full max-w-md grid grid-cols-2 min-[360px]:grid-cols-4 gap-2"
+          >
+            <Stat label={t('gameover.accuracy')} value={`${accuracyPct}%`} />
+            <Stat label="WPM" value={result.wpm} />
+            <Stat label={t('gameover.maxCombo')} value={result.max_combo} />
+            <Stat label={t('gameover.correctMissed')} value={`${result.correct_count} / ${result.miss_count}`} />
+          </motion.div>
+        </section>
 
         {/* 랭킹 리그 · 비로그인: "지금 로그인하면 N위" + 소셜 원클릭 (게스트→회원 전환 CTA) */}
-        {!isPractice && !authLoading && !user && (
-          <div className="card text-center max-w-md w-full">
+        {hasGuestCta && (
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="hm-panel p-4 md:p-6 text-center w-full max-w-md mx-auto"
+          >
             {preview ? (
-              <div className="text-sm text-white/85 mb-1 flex items-baseline justify-center gap-1.5 flex-wrap">
+              <div className="text-sm text-white/90 flex items-baseline justify-center gap-1.5 flex-wrap">
                 <span>{t('gameover.loginRankBefore')}</span>
                 <motion.span
                   initial={{ scale: 0.6, opacity: 0 }}
@@ -185,104 +247,71 @@ export default function GameOverPage() {
                 <span>{t('gameover.loginRankAfter')} 🏆</span>
               </div>
             ) : (
-              <div className="text-sm text-white/80 mb-1">
+              <div className="text-sm text-white/85">
                 {t('gameover.loginPromptLine2')} 🏆
               </div>
             )}
             {preview && preview.ranked_count > 0 && (
-              <div className="text-[11px] text-white/45 mb-3">{t('gameover.rankedCount', { count: preview.ranked_count })}</div>
+              <div className="text-[11px] text-white/55 mt-0.5">{t('gameover.rankedCount', { count: preview.ranked_count })}</div>
             )}
-            <div className="space-y-2 mt-3">
+            {/* 폰: 3개를 한 줄(이름만) · 넓은 화면: 세로로 "…로 계속하기" */}
+            <div className="grid grid-cols-3 md:grid-cols-1 gap-2 mt-3">
               {SOCIAL_PROVIDERS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => goSocial(p.id)}
-                  className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98] ${p.cls}`}
+                  aria-label={t('auth.continueWith', { provider: p.name })}
+                  className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 md:gap-2 transition active:scale-[0.98] ${p.cls}`}
                 >
-                  <span className="text-base">{p.icon}</span>
-                  {t('auth.continueWith', { provider: p.name })}
+                  <span className="text-base" aria-hidden>{p.icon}</span>
+                  <span className="md:hidden" aria-hidden>{p.name}</span>
+                  <span className="hidden md:inline" aria-hidden>{t('auth.continueWith', { provider: p.name })}</span>
                 </button>
               ))}
             </div>
-            <button type="button" className="text-xs text-white/55 underline underline-offset-2 mt-3 hover:text-white" onClick={goLogin}>
-              {t('gameover.loginWithEmail')}
-            </button>
-            <div className="text-[10px] text-white/40 mt-2">
-              {t('gameover.autoSaveHint')}
+            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <button type="button" className="text-xs text-white/70 underline underline-offset-2 hover:text-white" onClick={goLogin}>
+                {t('gameover.loginWithEmail')}
+              </button>
+              <span className="text-[11px] text-white/50">{t('gameover.autoSaveHint')}</span>
             </div>
-          </div>
+          </motion.section>
         )}
-
-        {/* 랭킹 리그 · 로그인 사용자: 저장 상태 표시 */}
-        {!isPractice && user && (
-          <div className="flex items-center gap-3">
-            {saving && <span className="text-white/50 text-sm">{t('gameover.saving')}</span>}
-            {saveErr && <span className="text-red-400 text-sm">{t('gameover.saveFailed', { err: saveErr })}</span>}
-            {saveRes && (
-              <>
-                {isNewBest && (
-                  <motion.span
-                    initial={{ scale: 0.5, rotate: -8 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                    className="px-3 py-1 rounded-full bg-yellow-400 text-black font-bold text-sm"
-                  >
-                    🏆 NEW BEST
-                  </motion.span>
-                )}
-                <span className="text-white/70">
-                  {t('gameover.seasonRank')} <span className="font-bold text-white">#{saveRes.rank_no}</span>
-                </span>
-              </>
-            )}
-          </div>
-        )}
-      </motion.div>
-
-      {/* 스탯 */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-10"
-      >
-        <Stat label={t('gameover.accuracy')} value={`${accuracyPct}%`} />
-        <Stat label="WPM" value={result.wpm} />
-        <Stat label={t('gameover.maxCombo')} value={result.max_combo} />
-        <Stat label={t('gameover.correctMissed')} value={`${result.correct_count} / ${result.miss_count}`} />
-      </motion.div>
-
-      {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
-      <div className="w-full max-w-2xl mb-8 flex justify-center">
-        <BannerSlot slot="gameover" />
       </div>
 
-      {/* 액션 */}
+      {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
+      <BannerSlot slot="gameover" />
+
+      {/* 달리는 도둑이 보이는 자리 — 남는 세로 공간을 여기에 몰아 준다 */}
+      {isHeist && <div className="flex-1 min-h-0" aria-hidden />}
+
+      {/* 액션 — 폰: 다시 도전(한 줄 전체) + 나머지 한 줄 · 넓은 화면: 한 줄 */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-        className="flex flex-wrap items-center justify-center gap-3"
+        transition={{ delay: 0.55 }}
+        className={`w-full max-w-md md:max-w-none grid gap-2 md:flex md:flex-wrap md:items-center md:justify-center md:gap-3 ${isPractice ? 'grid-cols-2' : 'grid-cols-3'}`}
       >
         <button
-          className="btn-primary"
-          onClick={() => nav(`/game/${result.category_seq}`, { replace: true })}
+          className={isHeist ? 'hm-btn hm-btn--go col-span-full !min-h-[52px] md:px-8' : 'btn-primary col-span-full'}
+          onClick={() => {
+            sound.play('click');
+            heistSfx.unlock();
+            nav(`/game/${result.category_seq}`, { replace: true });
+          }}
         >
           🔁 {t('gameover.tryAgain')}
         </button>
         {!isPractice && (
-          <button
-            className="btn-ghost"
-            onClick={() => nav(`/rankings/${result.category_seq}`)}
-          >
+          <button className={SUB_ACTION_CLS} onClick={() => nav(`/rankings/${result.category_seq}`)}>
             🏆 {t('gameover.viewRankings')}
           </button>
         )}
-        <button className="btn-ghost" onClick={() => nav('/league')}>
+        <button className={SUB_ACTION_CLS} onClick={() => nav('/league')}>
           {t('gameover.chooseLeague')}
         </button>
-        <button className="btn-ghost" onClick={() => nav('/')}>
+        <button className={SUB_ACTION_CLS} onClick={() => nav('/')}>
           {t('gameover.home')}
         </button>
       </motion.div>
@@ -290,11 +319,15 @@ export default function GameOverPage() {
   );
 }
 
+// 보조 버튼(랭킹 보기·리그 선택·홈) — 폰에서는 한 줄에 셋이 들어가게 작게, 그림 배경 위에서도 읽히게 어두운 바탕
+const SUB_ACTION_CLS =
+  'btn-ghost !px-2 !py-2.5 text-sm md:!px-6 md:!py-3 md:text-base bg-[rgba(11,16,38,0.62)] [word-break:keep-all]';
+
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="card text-center py-4">
-      <div className="text-2xl font-bold tabular-nums">{value}</div>
-      <div className="text-xs text-white/50 mt-1">{label}</div>
+    <div className="rounded-xl bg-[rgba(11,16,38,0.86)] border border-white/10 px-1 py-2.5 text-center">
+      <div className="text-base min-[400px]:text-lg md:text-xl font-bold tabular-nums leading-tight whitespace-nowrap">{value}</div>
+      <div className="text-[11px] text-white/60 mt-0.5 leading-tight [word-break:keep-all]">{label}</div>
     </div>
   );
 }

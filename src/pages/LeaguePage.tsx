@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import type { Category } from '../api/types';
 import CoverFlow from '../components/league/CoverFlow';
 import BannerSlot from '../components/BannerSlot';
+import '../components/heist/heistMenu.css';
 
 type Tab = 'practice' | 'ranking';
 
@@ -43,38 +44,26 @@ export default function LeaguePage() {
   const list = tab === 'practice' ? practice : ranking;
 
   return (
-    <div className="min-h-screen px-4 pt-16 pb-10 max-w-5xl mx-auto flex flex-col">
-      <h2 className="text-2xl font-bold text-center mb-1">{t('league.selectLeague')}</h2>
-      <p className="text-center text-sm text-white/45 mb-6">
+    <div className="min-h-screen px-4 pt-16 pb-8 max-w-5xl mx-auto flex flex-col">
+      {/* 리그 선택(2026-11-17 화면 재질 통일): 카드 = 밤거리에 선 "이번에 털 건물" + 크림색 판, 탭 = 크림색 알약 */}
+      <h2 className="hm-page-title text-center">{t('league.selectLeague')}</h2>
+      <p className="hm-page-sub text-center mb-4">
         {tab === 'practice' ? t('league.practiceSubtitle') : t('league.rankingSubtitle')}
       </p>
 
-      {/* 카테고리 탭(랭킹/연습) + 홈·새로고침 */}
-      <div className="mb-8 flex items-center justify-center gap-2 flex-wrap">
-        <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
+      {/* 카테고리 탭(랭킹/연습) + 새로고침. 홈 버튼은 화면 우상단 TopBar 에 있어 여기서는 뺐다(폰에서 한 줄에 안 들어감) */}
+      <div className="mb-5 flex items-center justify-center gap-2 flex-wrap">
+        <div className="hm-seg">
           <TabButton active={tab === 'ranking'} onClick={() => setTab('ranking')} label={t('league.rankingLeagueTab')} count={ranking.length} />
           <TabButton active={tab === 'practice'} onClick={() => setTab('practice')} label={t('league.practiceLeagueTab')} count={practice.length} />
         </div>
-        <button
-          onClick={() => nav('/')}
-          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition"
-          title={t('league.home')}
-          aria-label={t('league.goHome')}
-        >
-          🏠
-        </button>
-        <button
-          onClick={() => setReloadKey((k) => k + 1)}
-          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition text-lg"
-          title={t('league.refresh')}
-          aria-label={t('league.refresh')}
-        >
-          ↻
+        <button onClick={() => setReloadKey((k) => k + 1)} className="hm-roundbtn" title={t('league.refresh')} aria-label={t('league.refresh')}>
+          <span aria-hidden>↻</span>
         </button>
       </div>
 
-      {load && <p className="text-center text-white/50">{t('league.loading')}</p>}
-      {err && <p className="text-center text-red-400">{t('league.error', { msg: err })}</p>}
+      {load && <p className="text-center text-white/70">{t('league.loading')}</p>}
+      {err && <p className="text-center text-red-300">{t('league.error', { msg: err })}</p>}
 
       {!load && !err && (
         <div className="flex-1 flex items-center">
@@ -111,21 +100,9 @@ function TabButton({
   count: number;
 }) {
   return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`px-5 py-2 rounded-full text-sm font-bold transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
-        active ? 'bg-white text-ink shadow' : 'text-white/65 hover:text-white'
-      }`}
-    >
+    <button onClick={onClick} aria-pressed={active} className={`hm-seg-btn${active ? ' is-active' : ''}`}>
       {label}
-      <span
-        className={`text-[11px] px-1.5 py-0.5 rounded-full tabular-nums ${
-          active ? 'bg-ink/10 text-ink/70' : 'bg-white/10 text-white/55'
-        }`}
-      >
-        {count}
-      </span>
+      <span className="hm-seg-count">{count}</span>
     </button>
   );
 }

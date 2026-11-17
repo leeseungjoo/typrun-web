@@ -2,14 +2,22 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import type { Category } from '../../api/types';
+import { TrophyIcon } from '../heist/HeistIcons';
+import { leagueArtSrc } from './leagueArt';
+import '../heist/heistMenu.css';
 
 // 아이팟 커버플로우 스타일 리그 갤러리 — 좌우 슬라이딩, 중앙 카드 강조(3D 원근).
 // 조작: ←/→ 버튼 · 좌우 스와이프(드래그) · 옆 카드 클릭(중앙으로) · 중앙 카드 클릭(입장) · 키보드 ←/→.
 
 const STATUS_BADGE: Record<string, { labelKey: string; cls: string }> = {
-  coming_soon: { labelKey: 'league.comingSoonBadge', cls: 'bg-amber-500/20 border-amber-400/50 text-amber-200' },
-  ended: { labelKey: 'league.ended', cls: 'bg-white/10 border-white/25 text-white/65' },
+  coming_soon: { labelKey: 'league.comingSoonBadge', cls: 'hm-lcard-tag--soon' },
+  ended: { labelKey: 'league.ended', cls: '' },
 };
+
+const CARD_ASPECT = 1.32;    // 카드 세로/가로
+const CARD_MIN_W = 190;
+const CARD_MAX_W = 360;
+const PAGE_CHROME_PX = 370;  // 리그 선택 화면에서 카드 밖 요소(상단 바·제목·탭·넘기기·안내)가 차지하는 세로 높이
 
 interface CoverFlowProps {
   items: Category[];
@@ -23,6 +31,7 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
   const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [w, setW] = useState(0);
+  const [viewH, setViewH] = useState(() => window.innerHeight);
   const wrapRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const moved = useRef(false);
@@ -36,6 +45,13 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
     ro.observe(el);
     setW(el.clientWidth);
     return () => ro.disconnect();
+  }, []);
+
+  // 창 높이 추적 → 카드 크기를 세로에도 맞춘다(낮은 노트북 화면에서 스크롤이 생기지 않게, 큰 화면에서는 카드를 키운다)
+  useEffect(() => {
+    const onResize = () => setViewH(window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   // 목록이 줄어들면 인덱스 보정
@@ -57,8 +73,10 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
-  const cardW = Math.round(Math.max(190, Math.min(300, w * 0.6)) || 240);
-  const cardH = Math.round(cardW * 1.32);
+  // 카드 폭 = 컨테이너 폭의 60% 와 "창 높이에서 제목·탭·넘기기 버튼 자리를 뺀 높이" 중 작은 쪽(190~360px)
+  const widthByHeight = (viewH - PAGE_CHROME_PX) / CARD_ASPECT;
+  const cardW = Math.round(Math.max(CARD_MIN_W, Math.min(CARD_MAX_W, w * 0.6, widthByHeight)) || 240);
+  const cardH = Math.round(cardW * CARD_ASPECT);
   const spacing = Math.round(cardW * 0.62);
 
   if (items.length === 0) {
@@ -151,27 +169,25 @@ export default function CoverFlow({ items, isRanking, onEnter, onRanking }: Cove
       </div>
 
       {/* 좌우 버튼 + 인덱스 */}
-      <div className="flex items-center justify-center gap-5 mt-4">
+      <div className="flex items-center justify-center gap-3 sm:gap-5 mt-4 max-w-full">
         <NavArrow dir="prev" disabled={active === 0} onClick={() => go(-1)} />
-        <div className="flex items-center gap-0.5">
+        {/* 리그가 많고 화면이 좁으면 점이 두 줄로 접힌다(가로로 밀려나지 않게) */}
+        <div className="flex flex-wrap items-center justify-center gap-0.5 min-w-0">
           {items.map((c, i) => (
             <button
               key={c.seq}
               onClick={() => setActive(i)}
               aria-label={c.name || `${i + 1}`}
+              aria-current={i === active ? 'true' : undefined}
               className="flex items-center px-1 py-3" /* 투명 패딩으로 ~44px 터치 타깃(시각 바는 그대로 h-2) */
             >
-              <span
-                className={`block h-2 rounded-full transition-all ${
-                  i === active ? 'w-5 bg-white/85' : 'w-2 bg-white/30 hover:bg-white/50'
-                }`}
-              />
+              <span className={`hm-dot${i === active ? ' is-active' : ''}`} />
             </button>
           ))}
         </div>
         <NavArrow dir="next" disabled={active === items.length - 1} onClick={() => go(1)} />
       </div>
-      <p className="text-center text-[11px] text-white/40 mt-2">{t('league.coverFlowHint')}</p>
+      <p className="text-center text-[11px] text-white/60 mt-2 [word-break:keep-all]">{t('league.coverFlowHint')}</p>
     </div>
   );
 }
@@ -183,11 +199,7 @@ function NavArrow({ dir, disabled, onClick }: { dir: 'prev' | 'next'; disabled: 
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === 'prev' ? t('league.prevLeague') : t('league.nextLeague')}
-      className={`w-11 h-11 rounded-full border flex items-center justify-center text-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
-        disabled
-          ? 'border-white/10 text-white/20 cursor-not-allowed'
-          : 'border-white/25 text-white/80 hover:bg-white/10 active:scale-95'
-      }`}
+      className="hm-roundbtn"
     >
       <span aria-hidden>{dir === 'prev' ? '‹' : '›'}</span>
     </button>
@@ -211,70 +223,71 @@ function CoverCard({
   const isComingSoon = cat.status === 'coming_soon';
   const isEnded = cat.status === 'ended';
   const badge = STATUS_BADGE[cat.status];
-  const accent = isRanking ? 'from-violet-500/25 to-indigo-700/10' : 'from-emerald-500/20 to-teal-700/10';
 
   return (
-    <div
-      className={`relative w-full h-full rounded-2xl border overflow-hidden flex flex-col p-5 shadow-[0_18px_40px_rgba(0,0,0,0.5)] ${
-        isCenter ? 'border-white/35 bg-[#211c3f]' : 'border-white/12 bg-[#191430]'
-      }`}
-      style={{ backfaceVisibility: 'hidden' }}
-    >
-      {/* 상단 그라데이션 헤더 */}
-      <div className={`absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b ${accent} pointer-events-none`} />
-
-      <div className="relative flex items-center gap-2 flex-wrap">
+    <div className="hm-lcard">
+      {/* 위: 리그 삽화(카드 폭을 꽉 채움, 장식) + 배지. 삽화가 없는 새 리그는 기본 삽화가 나온다 */}
+      <div className="hm-lcard-scene" aria-hidden>
+        <img className="hm-lcard-art" src={leagueArtSrc(cat)} alt="" loading="lazy" draggable={false} />
+      </div>
+      <div className="hm-lcard-badges">
         {cat.is_super_beginner === 'Y' && (
-          <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-sky-500/25 border border-sky-400/50 text-sky-200">
-            🐣 {t('league.beginner')}
+          <span className="hm-lcard-tag hm-lcard-tag--beginner">
+            <span aria-hidden>🐣</span> {t('league.beginner')}
           </span>
         )}
-        {badge && (
-          <span className={`text-[11px] px-1.5 py-0.5 rounded-full border ${badge.cls}`}>{t(badge.labelKey)}</span>
-        )}
-        <span className="ml-auto text-[11px] px-2 py-0.5 rounded bg-black/30 text-white/70 whitespace-nowrap">
+        {badge && <span className={`hm-lcard-tag ${badge.cls}`}>{t(badge.labelKey)}</span>}
+        <span className="hm-lcard-tag hm-lcard-tag--level">
           {cat.lang.toUpperCase()} · Lv{cat.difficulty}
         </span>
       </div>
 
-      <h3 className="relative mt-3 text-2xl font-bold leading-tight line-clamp-2">{cat.name}</h3>
-      <p className="relative mt-2 text-sm text-white/55 line-clamp-3 grow">{cat.description}</p>
+      {/* 아래: 크림색 판 — 이름·설명·기간·버튼 */}
+      <div className="hm-lcard-body">
+        <h3 className="hm-lcard-name">{cat.name}</h3>
+        <p className="hm-lcard-desc">{cat.description}</p>
 
-      {isComingSoon && cat.open_at ? (
-        <p className="relative text-[11px] text-amber-200/70 mb-2">🗓 {t('league.openOn', { date: cat.open_at })}</p>
-      ) : cat.open_at && cat.close_at ? (
-        <p className="relative text-[11px] text-white/45 mb-2">🗓 {t('league.dateRange', { open: cat.open_at, close: cat.close_at })}</p>
-      ) : null}
+        {isComingSoon && cat.open_at ? (
+          <p className="hm-lcard-date is-soon">
+            <span aria-hidden>🗓</span> {t('league.openOn', { date: cat.open_at })}
+          </p>
+        ) : cat.open_at && cat.close_at ? (
+          <p className="hm-lcard-date">
+            <span aria-hidden>🗓</span> {t('league.dateRange', { open: cat.open_at, close: cat.close_at })}
+          </p>
+        ) : null}
 
-      {/* CTA — 중앙 카드에서만 노출 */}
-      {isCenter && (
-        <div className="relative flex gap-2 mt-1">
-          <button
-            type="button"
-            disabled={isComingSoon}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isComingSoon) onEnter(cat);
-            }}
-            className="btn-primary py-2.5 px-4 text-sm flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isComingSoon ? t('league.comingSoonBadge') : isRanking ? t('league.enter') : isEnded ? t('league.playAgain') : t('league.play')}
-          </button>
-          {isRanking && onRanking && (
+        {/* CTA — 중앙 카드에서만 노출 */}
+        {isCenter && (
+          <div className="hm-lcard-cta">
             <button
               type="button"
+              disabled={isComingSoon}
               onClick={(e) => {
                 e.stopPropagation();
-                onRanking(cat);
+                if (!isComingSoon) onEnter(cat);
               }}
-              className="btn-ghost py-2.5 px-3 text-sm"
-              title={t('league.thisLeagueRankings')}
+              className="hm-lcard-go"
             >
-              🏆
+              {isComingSoon ? t('league.comingSoonBadge') : isRanking ? t('league.enter') : isEnded ? t('league.playAgain') : t('league.play')}
             </button>
-          )}
-        </div>
-      )}
+            {isRanking && onRanking && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRanking(cat);
+                }}
+                className="hm-lcard-rank"
+                title={t('league.thisLeagueRankings')}
+                aria-label={t('league.thisLeagueRankings')}
+              >
+                <TrophyIcon />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

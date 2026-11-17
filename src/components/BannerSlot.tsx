@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 import { getBanner, clickBanner, type BannerData } from '../api/banner';
+import './heist/heistMenu.css';
 
 type Props = {
   slot: 'gameover' | 'main' | 'lobby';
   isMember?: boolean;
   className?: string;
+  /** card = 그림·부제까지 보이는 큰 배너(기본) · chip = 화면 구석에 두는 한 줄 알림(제목만, 부제는 툴팁) */
+  variant?: 'card' | 'chip';
 };
 
 const KIND_TAG: Record<string, string> = { b2b: 'AD', event: 'EVENT', notice: 'NOTICE' };
 
 // 위치(slot)별 배너 노출. 서버가 가중치로 1개 선택. 클릭 시 집계 후 링크 이동.
 // 배너 없으면 아무것도 렌더하지 않는다(레이아웃 영향 최소).
-export default function BannerSlot({ slot, isMember = false, className = '' }: Props) {
+//
+// 사용 예
+//   <BannerSlot slot="gameover" />                                  // 최소
+//   <BannerSlot slot="main" isMember={!!user} variant="chip" />     // 상단 구석 알림 칩
+export default function BannerSlot({ slot, isMember = false, className = '', variant = 'card' }: Props) {
   const [banner, setBanner] = useState<BannerData>(null);
 
   useEffect(() => {
@@ -35,6 +42,16 @@ export default function BannerSlot({ slot, isMember = false, className = '' }: P
       const url = /^https?:\/\//i.test(banner.linkUrl) ? banner.linkUrl : `https://${banner.linkUrl}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }
+  }
+
+  if (variant === 'chip') {
+    return (
+      <button type="button" onClick={onClick} className={`hm-chip ${className}`} title={banner.subtitle || banner.title}>
+        <span className="hm-chip-tag">{tag}</span>
+        <span className="hm-chip-title">{banner.title}</span>
+        {banner.linkUrl && <span className="hm-chip-arrow" aria-hidden>›</span>}
+      </button>
+    );
   }
 
   return (

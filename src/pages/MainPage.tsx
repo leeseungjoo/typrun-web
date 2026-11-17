@@ -9,8 +9,15 @@ import ContactModal from '../components/ContactModal';
 import Footer from '../components/Footer';
 import BannerSlot from '../components/BannerSlot';
 import RunnerScene from '../components/game/RunnerScene';
+import { PlayIcon, TrophyIcon } from '../components/heist/HeistIcons';
+import '../components/heist/heistMenu.css';
+import { SITE_THEME } from '../lib/theme';
+import { sound } from '../lib/sound';
 import logo from '../assets/backgrounds/logo.png';
 import type { Season } from '../api/types';
+
+// 도둑 런 메인 제목 로고(사장 생성본 "마스크 쓴 TYP RUN 로고" → heist-ingest). 크기는 자리를 미리 잡는 용도
+const TITLE_LOGO = { src: '/heist/ui/title_logo.webp', width: 1266, height: 522 } as const;
 
 export default function MainPage() {
   const nav = useNavigate();
@@ -22,15 +29,26 @@ export default function MainPage() {
   const [isTouch] = useState(
     () => (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ?? false,
   );
+  const isHeist = SITE_THEME === 'heist';
 
   useEffect(() => {
     api.currentSeason().then(setSeason).catch(console.error);
   }, []);
 
-  // 어트랙트 모드 — 방문자가 클릭 전에 게임을 보게 하는 데모 (아케이드 대기화면).
+  // 메뉴 버튼 소리는 누르는 순간 나야 한다 — 그 파일 하나만 미리 받는다(게임용 소리는 게임 화면에서 받는다)
+  useEffect(() => {
+    if (isHeist) sound.preload(['click']);
+  }, [isHeist]);
+
+  // 제목 로고 그림을 다 받은 뒤에 나타나게 한다(받는 중에 빈 틀이 튀어나오지 않게)
+  const [isLogoReady, setIsLogoReady] = useState(false);
+
+  // 어트랙트 모드(도둑 런 이전 테마) — 방문자가 클릭 전에 게임을 보게 하는 데모 (아케이드 대기화면).
   // 가짜 정답/미스 카운터만 올려 러너 씬이 점프·가속·넘어짐을 스스로 연기한다.
+  // 도둑 런 메인은 전역 배경(HeistBackdrop 의 run)이 화면 전체에 달리는 장면을 깔므로 여기서는 돌리지 않는다.
   const [demo, setDemo] = useState({ correct: 0, miss: 0 });
   useEffect(() => {
+    if (isHeist) return;
     let n = 0;
     const id = setInterval(() => {
       n += 1;
@@ -39,7 +57,121 @@ export default function MainPage() {
       );
     }, 2400);
     return () => clearInterval(id);
-  }, []);
+  }, [isHeist]);
+
+  const seasonLine = season ? t('main.season', { year: season.year, month: season.month, end: season.end_date }) : null;
+
+  const loginPrompt = !user && !loading && (
+    <>
+      {t('main.loginPromptPre')}
+      <button className="underline hover:text-white font-semibold" onClick={() => nav('/login')}>
+        {t('main.loginPromptLink')}
+      </button>
+      {t('main.loginPromptPost')}
+    </>
+  );
+
+  // 상품 수령용 이메일 미등록 경고
+  const emailWarning = user && isSyntheticEmail(user.email) && (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      onClick={() => nav('/profile')}
+      className="px-4 py-3 rounded-xl bg-yellow-400/15 border border-yellow-400/40 text-yellow-100 text-xs leading-relaxed max-w-sm cursor-pointer hover:bg-yellow-400/20 backdrop-blur-sm"
+    >
+      {t('main.emailWarnTitle')}<br />
+      <span className="text-yellow-100/70 text-[10px]">
+        {t('main.emailWarnSub')}
+      </span>
+    </motion.div>
+  );
+
+  const footer = (
+    <>
+      {/* 하단 푸터 — 개인정보처리방침 / 이용약관 / 운영사 / 제휴문의 */}
+      <div className="relative z-10">
+        <Footer onContact={() => setContactOpen(true)} />
+      </div>
+      <AnimatePresence>
+        {contactOpen && (
+          <ContactModal onClose={() => setContactOpen(false)} defaultKind="inquiry" />
+        )}
+      </AnimatePresence>
+    </>
+  );
+
+  // ── 도둑 런 메인(대기화면) — 올리브영 타이틀 구도: 가운데 위 큰 제목, 가운데에서 도둑이 달리고,
+  //    아래 바닥 띠의 좌우에 [게임 시작] [랭킹]. 달리는 장면은 전역 배경(HeistBackdrop)이 화면 전체에 그린다.
+  //    로그인·공지(좌상단), 타자 테스트(우상단)는 전역 TopBar. 좁은 화면에서는 버튼이 제목 바로 밑으로 올라간다(CSS).
+  if (isHeist) {
+    const go = (to: string) => () => {
+      sound.play('click');
+      nav(to);
+    };
+    return (
+      <div className="relative min-h-[100dvh] flex flex-col">
+        <main className="hm-main">
+          <motion.h1
+            className="hm-title"
+            initial={{ opacity: 0, scale: 0.86 }}
+            animate={isLogoReady ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.86 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 16, delay: 0.05 }}
+          >
+            {/* 그림을 못 받아도(onError) 자리는 보여 준다 — 제목이 영영 숨지 않게 */}
+            <img
+              className="hm-title-logo"
+              src={TITLE_LOGO.src}
+              width={TITLE_LOGO.width}
+              height={TITLE_LOGO.height}
+              alt="TypRun"
+              draggable={false}
+              onLoad={() => setIsLogoReady(true)}
+              onError={() => setIsLogoReady(true)}
+            />
+          </motion.h1>
+
+          <motion.p
+            className="hm-tagline"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <span>{t('main.heistTagline')}</span>
+            {seasonLine && <span className="hm-tagline-season">{seasonLine}</span>}
+          </motion.p>
+
+          <motion.div
+            className="hm-main-bottom"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.28 }}
+          >
+            <button type="button" className="hm-btn hm-btn--go" onClick={go('/league')}>
+              <PlayIcon />
+              {t('main.start')}
+            </button>
+            {/* 가운데 칸 = 달리는 도둑의 발밑 — 작은 안내만 둔다 */}
+            <div className="hm-main-center">
+              {isTouch && (
+                <button type="button" className="hm-side" onClick={go('/tap')}>
+                  {t('main.tapRunner')}
+                  <span className="hm-badge">β</span>
+                </button>
+              )}
+              {loginPrompt && <p className="hm-main-note">{loginPrompt}</p>}
+              {emailWarning}
+            </div>
+            <button type="button" className="hm-btn hm-btn--rank" onClick={go('/rankings')}>
+              <TrophyIcon />
+              {t('main.rankingShort')}
+            </button>
+          </motion.div>
+        </main>
+        {footer}
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex flex-col">
@@ -68,9 +200,9 @@ export default function MainPage() {
         />
 
         {/* 시즌 */}
-        {season && (
+        {seasonLine && (
           <p className="text-base md:text-xl text-white mt-3 mb-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
-            {t('main.season', { year: season.year, month: season.month, end: season.end_date })}
+            {seasonLine}
           </p>
         )}
 
@@ -109,44 +241,14 @@ export default function MainPage() {
         </div>
 
         {/* 비로그인 안내 */}
-        {!user && !loading && (
-          <p className="text-sm text-white/90 mt-5 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
-            {t('main.loginPromptPre')}
-            <button className="underline hover:text-white font-semibold" onClick={() => nav('/login')}>
-              {t('main.loginPromptLink')}
-            </button>
-            {t('main.loginPromptPost')}
-          </p>
+        {loginPrompt && (
+          <p className="text-sm text-white/90 mt-5 drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">{loginPrompt}</p>
         )}
 
-        {/* 상품 수령용 이메일 미등록 경고 */}
-        {user && isSyntheticEmail(user.email) && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            onClick={() => nav('/profile')}
-            className="mt-6 px-4 py-3 rounded-xl bg-yellow-400/15 border border-yellow-400/40 text-yellow-100 text-xs leading-relaxed max-w-sm cursor-pointer hover:bg-yellow-400/20 backdrop-blur-sm"
-          >
-            {t('main.emailWarnTitle')}<br />
-            <span className="text-yellow-100/70 text-[10px]">
-              {t('main.emailWarnSub')}
-            </span>
-          </motion.div>
-        )}
+        {emailWarning && <div className="mt-6">{emailWarning}</div>}
       </div>
 
-      {/* 하단 푸터 — 개인정보처리방침 / 이용약관 / 운영사 / 제휴문의 (어트랙트 씬 위 레이어) */}
-      <div className="relative z-10">
-        <Footer onContact={() => setContactOpen(true)} />
-      </div>
-
-      {/* 문의 모달 */}
-      <AnimatePresence>
-        {contactOpen && (
-          <ContactModal onClose={() => setContactOpen(false)} defaultKind="inquiry" />
-        )}
-      </AnimatePresence>
+      {footer}
     </div>
   );
 }

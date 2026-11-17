@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { switchLocale, type AppLocale } from '../i18n';
+import { SITE_THEME } from '../lib/theme';
+import BannerSlot from './BannerSlot';
 
 /**
  * 전 페이지 공용 상단 바 (App 레벨 고정).
- * - 좌측: 로그인/프로필 + (활성 이벤트 시) 초대 버튼
- * - 우측: 언어 토글(EN/KR) + 홈 버튼 (홈 화면에선 홈 숨김)
+ * - 좌측: 로그인/프로필 + (활성 이벤트 시) 초대 버튼, 메인에서는 그 아래 공지 알림 칩
+ * - 우측: 언어 토글(EN/KR) + 홈 버튼 (홈 화면에선 홈 대신 타자 테스트)
  * 게임/로그인/결과 등 집중 화면에서는 숨기고, 그 화면들이 자체 배치한다.
  */
 const NAV_PREFIXES = ['/league', '/rankings', '/profile', '/insider'];
@@ -36,10 +38,14 @@ export default function TopBar() {
   const onInsider = path.startsWith('/insider');
   const cur: AppLocale = i18n.language?.startsWith('en') ? 'en' : 'ko';
 
+  // 도둑 런 메인(올리브영 타이틀 구도): 공지 알림은 좌상단, 타자 테스트는 우상단으로 뺀다(2026-11-17 사장)
+  const isHeistHome = isHome && SITE_THEME === 'heist';
+
   return (
     <div className="fixed top-0 inset-x-0 z-40 flex items-start justify-between gap-2 p-3 pointer-events-none">
-      {/* 좌측: 로그인/프로필 + 초대 */}
-      <div className="flex items-center gap-2 pointer-events-auto min-w-0">
+      {/* 좌측: 로그인/프로필 + 초대, 그 아래 공지 알림(메인만) */}
+      <div className="flex flex-col items-start gap-2 min-w-0">
+      <div className="flex items-center gap-2 pointer-events-auto min-w-0 max-w-full">
         {loading ? (
           <span className="text-xs text-white/30">···</span>
         ) : user ? (
@@ -78,10 +84,18 @@ export default function TopBar() {
           </button>
         )}
       </div>
+        {/* 로그인 확인이 끝난 뒤에 조회 — 회원 여부가 바뀌며 두 번 조회(노출 2회 집계)되지 않게 */}
+        {isHeistHome && !loading && <BannerSlot slot="main" isMember={!!user} variant="chip" className="pointer-events-auto" />}
+      </div>
 
-      {/* 우측: 언어 토글 + 홈 (홈 화면에선 홈 숨김) */}
-      <div className="flex items-center gap-2 pointer-events-auto">
+      {/* 우측: 언어 토글 + 타자 테스트(메인) / 홈(그 밖의 화면) */}
+      <div className="flex items-center gap-2 pointer-events-auto shrink-0">
         <LocaleToggle cur={cur} />
+        {isHeistHome && (
+          <button className="topbtn topbtn-accent" onClick={() => nav('/test')} title={t('main.speedTest')}>
+            {t('main.typingTest')}
+          </button>
+        )}
         {!isHome && (
           <button className="topbtn" onClick={() => nav('/')}>
             {t('topbar.home')}

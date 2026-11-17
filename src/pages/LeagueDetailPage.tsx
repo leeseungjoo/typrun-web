@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import type { Category } from '../api/types';
 import LiveCounter from '../components/battle/LiveCounter';
+import { PlayIcon, TrophyIcon } from '../components/heist/HeistIcons';
+import '../components/heist/heistMenu.css';
+import { sound } from '../lib/sound';
+import { heistSfx } from '../lib/heistSfx';
 
 // 배틀 실서비스 게이트 — ws.typrun.com(2026-06-15 배포 완료)에 연결. 베타 운영.
 // false 면 배틀 버튼은 '곧 오픈'(비활성)으로 노출되어 죽은 로비로 빠지지 않는다.
 const BATTLE_ENABLED = true;
 
-// 리그 선택 → 이 페이지에서 모드(랭킹전 / 배틀2인 / 배틀3인) 선택.
-// 랭킹전만 활성, 배틀은 ws 배포 후 오픈. 상단에 리그별 접속자 카운터.
+// 리그 선택 → 이 페이지에서 시작.
+// 투톱 = [게임 시작] [랭킹] (2026-11-17 사장: 랭킹전·배틀·1:1 이 나란히 있어 헷갈린다 → 시작과 랭킹만 크게,
+// 대결 모드 두 개는 아래에 작게 뺀다). 상단에 리그별 접속자 카운터.
 export default function LeagueDetailPage() {
   const nav = useNavigate();
   const { t } = useTranslation();
@@ -56,6 +60,16 @@ export default function LeagueDetailPage() {
   const isComingSoon = cat?.status === 'coming_soon';
   const playable = !!cat && !isComingSoon;
 
+  // 투톱 버튼은 누르는 순간 소리가 나야 한다 — 그 파일 하나만 미리 받는다
+  useEffect(() => {
+    sound.preload(['click']);
+  }, []);
+  const go = (to: string) => () => {
+    sound.play('click');
+    heistSfx.unlock(); // 게임 효과음(점프·경광등)이 첫 단어부터 나게, 누르는 순간 소리 장치를 깨운다
+    nav(to);
+  };
+
   return (
     <div className="min-h-screen px-6 pt-16 pb-8 max-w-2xl mx-auto">
       <button
@@ -74,7 +88,7 @@ export default function LeagueDetailPage() {
       {cat && (
         <>
           {/* 리그 헤더 + 접속자 카운터 */}
-          <div className="card mb-5">
+          <div className="hm-panel p-6 mb-5">
             <div className="flex items-start justify-between gap-3 mb-1">
               <h2 className="text-2xl font-bold flex items-center gap-2 flex-wrap">
                 {cat.is_super_beginner === 'Y' && (
@@ -99,91 +113,67 @@ export default function LeagueDetailPage() {
             <LiveCounter categorySeq={cat.seq} />
           </div>
 
-          {/* 모드 선택 */}
-          <h3 className="text-sm font-bold text-white/50 mb-3 tracking-wider">{t('league.playMode')}</h3>
-          <div className="space-y-2.5">
-            <ModeButton
-              emoji="🏅"
-              title={t('league.rankingMatch')}
-              subtitle={playable ? t('league.rankingMatchDesc') : t('league.comingSoon')}
-              ready={playable}
-              badge={!playable ? t('league.comingSoonBadge') : undefined}
-              onClick={() => nav(`/game/${cat.seq}`)}
-            />
-            <ModeButton
-              emoji="⚔️"
-              title={t('league.battle')}
-              subtitle={t('league.battleDesc')}
-              ready={BATTLE_ENABLED && playable}
-              badge={!playable ? t('league.comingSoonBadge') : BATTLE_ENABLED ? t('league.beta') : t('league.comingSoon')}
-              onClick={() => nav(`/battle/${cat.seq}/2p`)}
-            />
-            {/* 친구 초대 1:1 — 링크 공유로 비회원 친구도 바로 대결(바이럴 루프 진입점) */}
-            <ModeButton
-              emoji="🔗"
-              title={t('league.inviteBattle')}
-              subtitle={t('league.inviteBattleDesc')}
-              ready={BATTLE_ENABLED && playable}
-              badge={playable && BATTLE_ENABLED ? t('league.beta') : undefined}
-              onClick={() => nav(`/battle/invite/new/${cat.seq}`)}
-            />
+          {/* 투톱 — 시작 · 랭킹 */}
+          <div className="hm-twotop !w-full">
+            <button
+              type="button"
+              className="hm-btn hm-btn--go hm-btn--tall"
+              disabled={!playable}
+              onClick={go(`/game/${cat.seq}`)}
+            >
+              <PlayIcon />
+              <span className="hm-btn-text">
+                {t('league.start')}
+                <small>{playable ? t('league.rankingMatchDesc') : t('league.comingSoon')}</small>
+              </span>
+            </button>
+            <button type="button" className="hm-btn hm-btn--rank hm-btn--tall" onClick={go(`/rankings/${cat.seq}`)}>
+              <TrophyIcon />
+              <span className="hm-btn-text">
+                {t('league.rankings')}
+                <small>{t('league.rankingsDesc')}</small>
+              </span>
+            </button>
           </div>
 
-          <button onClick={() => nav(`/rankings/${cat.seq}`)} className="btn-ghost w-full mt-5">
-            🏆 {t('league.viewLeagueRankings')}
-          </button>
-
-          <p className="text-[11px] text-white/55 text-center mt-3">
-            {BATTLE_ENABLED
-              ? t('league.battleBetaNote')
-              : t('league.battleComingNote')}
-          </p>
+          {/* 대결 모드 — 한쪽으로 뺀 작은 선택지(베타). 친구 초대 1:1 은 비회원 친구도 바로 대결(바이럴 루프 진입점) */}
+          <section className="mt-7" aria-labelledby="league-versus">
+            <h3 id="league-versus" className="flex items-center gap-2 text-xs font-bold text-white/60 mb-2 tracking-wider">
+              {t('league.versusLabel')}
+              <span className="hm-badge">{!playable ? t('league.comingSoonBadge') : BATTLE_ENABLED ? t('league.beta') : t('league.comingSoon')}</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                className="hm-side"
+                disabled={!(BATTLE_ENABLED && playable)}
+                onClick={() => nav(`/battle/${cat.seq}/2p`)}
+              >
+                <span className="text-xl" aria-hidden>⚔️</span>
+                <span>
+                  {t('league.battle')}
+                  <small>{t('league.battleShort')}</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="hm-side"
+                disabled={!(BATTLE_ENABLED && playable)}
+                onClick={() => nav(`/battle/invite/new/${cat.seq}`)}
+              >
+                <span className="text-xl" aria-hidden>🔗</span>
+                <span>
+                  {t('league.inviteBattle')}
+                  <small>{t('league.inviteShort')}</small>
+                </span>
+              </button>
+            </div>
+            <p className="text-[11px] text-white/55 mt-2.5 [word-break:keep-all]">
+              {BATTLE_ENABLED ? t('league.battleBetaNote') : t('league.battleComingNote')}
+            </p>
+          </section>
         </>
       )}
     </div>
-  );
-}
-
-interface ModeButtonProps {
-  emoji: string;
-  title: string;
-  subtitle: string;
-  ready: boolean;
-  badge?: string;
-  onClick?: () => void;
-}
-
-function ModeButton({ emoji, title, subtitle, ready, badge, onClick }: ModeButtonProps) {
-  return (
-    <motion.button
-      whileHover={ready ? { y: -2 } : undefined}
-      disabled={!ready}
-      onClick={ready ? onClick : undefined}
-      className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 ${
-        ready
-          ? 'bg-violet-500/15 border-violet-400/50 hover:bg-violet-500/25 cursor-pointer'
-          : 'bg-white/5 border-white/10 opacity-60 cursor-not-allowed'
-      }`}
-    >
-      <span className="text-3xl" aria-hidden>
-        {emoji}
-      </span>
-      <span className="flex-1">
-        <span className="block font-bold text-base">{title}</span>
-        <span className="block text-xs text-white/50">{subtitle}</span>
-      </span>
-      <span className="flex items-center gap-2 shrink-0">
-        {badge && (
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-200">
-            {badge}
-          </span>
-        )}
-        {ready && (
-          <span className="text-white/40 text-xl" aria-hidden>
-            ›
-          </span>
-        )}
-      </span>
-    </motion.button>
   );
 }

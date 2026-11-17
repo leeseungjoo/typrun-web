@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SITE_THEME } from '../lib/theme';
+import HeistBackdrop from './heist/HeistBackdrop';
 
 /**
  * 전 페이지 공통 배경 — 심플 그라데이션 + 위에서 아래로 떨어지는 별비(기획 2026-06-15).
@@ -51,7 +52,9 @@ export function useIsClassroomScene(): boolean {
 
 export default function SceneBackground() {
   const isClassroom = useIsClassroomScene();
-  return isClassroom ? <ChalkboardBackground /> : <StarfallBackground />;
+  if (isClassroom) return <ChalkboardBackground />;
+  // 도둑 런 테마 — 별 바탕 + 키아트(화면 성격별로 가리는 정도가 다르다. HeistBackdrop 참고)
+  return SITE_THEME === 'heist' ? <HeistBackdrop /> : <StarfallBackground />;
 }
 
 function StarfallBackground() {

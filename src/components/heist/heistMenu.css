@@ -1,0 +1,521 @@
+/* 도둑 런 — 게임 밖 화면(메인·리그·결과 등)의 배경과 버튼.
+   게임 화면 전용 스타일은 components/game/heist/heist.css 에 있다. 색은 그쪽 표시줄과 같은 값을 쓴다. */
+:root {
+  --hm-night: #070a1c;
+  --hm-ink: #0b1026;
+  --hm-cream: #f3efd9;
+  --hm-cream-deep: #b8b08a;
+  --hm-muted: #5b6077;
+  --hm-crimson: #e63a58;
+  --hm-crimson-deep: #a81f3b;
+  --hm-amber: #ffb020;
+  --hm-teal: #2dd4bf;
+}
+
+/* ── 배경 ─────────────────────────────────────────────────────────
+   run = 달리는 화면(대기·종료) · page = 사이 화면(별 바탕 + 키아트) · quiet = 글·게임이 주인공 · none = 게임 화면(바탕색만) */
+.hm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background: radial-gradient(900px 600px at 80% -10%, rgba(94, 114, 255, 0.18), transparent 60%), var(--hm-night);
+}
+/* 그림은 아래쪽(거리)을 기준으로 채운다. 창이 좁아질수록 가로가 잘리므로, 도둑(그림 가로 55~78%)이 항상 남도록
+   기준점을 오른쪽으로 옮긴다. 넓은 창에서는 왼쪽의 경비원(10~17%)도 같이 보인다. */
+.hm-backdrop-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 35% 100%;
+  user-select: none;
+}
+@media (max-aspect-ratio: 5/4) { .hm-backdrop-art { object-position: 55% 100%; } }
+@media (max-aspect-ratio: 1/1) { .hm-backdrop-art { object-position: 62% 100%; } }
+@media (max-aspect-ratio: 3/4) { .hm-backdrop-art { object-position: 72% 100%; } }
+/* 그림 위에 놓이는 공용 카드(.card: 랭킹 표·프로필 등)는 글이 묻히지 않게 어둡게 깐다 */
+:root:has(.hm-backdrop) .card { background-color: rgba(11, 16, 38, 0.72); }
+.hm-backdrop-veil {
+  position: absolute;
+  inset: 0;
+}
+/* 달리는 화면: 위(상단 버튼·제목)와 아래(버튼·푸터)만 살짝 눌러 준다 — 가운데 장면은 그대로 */
+.hm-backdrop[data-tone='run'] .hm-backdrop-veil {
+  background: linear-gradient(180deg, rgba(7, 10, 28, 0.32) 0%, rgba(7, 10, 28, 0) 26%, rgba(7, 10, 28, 0) 84%, rgba(7, 10, 28, 0.38) 100%);
+}
+.hm-backdrop[data-tone='page'] .hm-backdrop-veil {
+  background: linear-gradient(180deg, rgba(7, 10, 28, 0.7) 0%, rgba(7, 10, 28, 0.56) 55%, rgba(7, 10, 28, 0.74) 100%);
+}
+.hm-backdrop[data-tone='quiet'] .hm-backdrop-veil {
+  background: rgba(7, 10, 28, 0.88);
+}
+
+/* 하늘에서 제자리로 반짝이는 별 — 그림의 하늘 구간에만 뿌린다(transform 없음, opacity 만) */
+.hm-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.15;
+  animation: hm-twinkle var(--hm-star-dur, 5s) ease-in-out infinite;
+  animation-delay: var(--hm-star-delay, 0s);
+}
+@keyframes hm-twinkle {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: var(--hm-star-max, 0.85); }
+}
+
+/* ── 메인(대기화면) — 올리브영 타이틀 구도 ─────────────────────────
+   가운데 위 큰 제목, 가운데에서 도둑이 달리고(게임 씬: 발이 화면 세로 77.5% 선), 그 아래 바닥 띠의 좌우에 버튼 둘. */
+.hm-main {
+  position: relative;
+  z-index: 10;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(48px, 9vh, 110px) 20px 0; /* dvh 를 모르는 옛 브라우저용 */
+  padding: clamp(48px, 9dvh, 110px) 20px 0;
+  text-align: center;
+}
+/* 제목 = 로고 그림(가로:세로 약 2.43:1). 폭은 창 폭과 높이 중 빠듯한 쪽에 맞춘다 */
+.hm-title {
+  margin: 0;
+  line-height: 0;
+}
+.hm-title-logo {
+  display: block;
+  width: clamp(230px, min(84vw, 52vh), 660px);
+  width: clamp(230px, min(84vw, 52dvh), 660px);
+  height: auto;
+  user-select: none;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+}
+.hm-tagline {
+  margin: clamp(6px, 1.7vh, 20px) 0 0;
+  margin: clamp(6px, 1.7dvh, 20px) 0 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+  max-width: 100%;
+  padding: 7px 18px;
+  border-radius: 22px;
+  background: rgba(11, 16, 38, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  font-size: clamp(13px, 1.9vh, 17px);
+  font-size: clamp(13px, 1.9dvh, 17px);
+  font-weight: 700;
+  color: #fff;
+  word-break: keep-all;
+}
+.hm-tagline-season { color: var(--hm-amber); font-weight: 800; }
+
+/* 아래 줄: [게임 시작] · (도둑 발밑: 안내) · [랭킹] — 올리브영 버튼 자리(가로 16~35% / 65~84%)에 맞춘 3칸 */
+.hm-main-bottom {
+  margin-top: auto;
+  width: min(100%, max(68vw, 640px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding-bottom: clamp(2px, 1vh, 14px);
+  padding-bottom: clamp(2px, 1dvh, 14px);
+}
+.hm-main-bottom .hm-btn {
+  min-height: clamp(60px, 10vh, 108px);
+  min-height: clamp(60px, 10dvh, 108px);
+  border-radius: clamp(18px, 2.6vh, 30px);
+  border-radius: clamp(18px, 2.6dvh, 30px);
+  font-size: clamp(20px, 3.2vh, 34px);
+  font-size: clamp(20px, 3.2dvh, 34px);
+}
+.hm-main-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* 안내 한 줄 — 달리는 장면 위에 얹히므로 어두운 바탕을 깐다 */
+.hm-main-note {
+  margin: 0;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.72);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  word-break: keep-all;
+}
+
+/* ── 투톱 버튼(시작 · 랭킹) ─────────────────────────────────────── */
+.hm-twotop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: min(100%, 560px);
+}
+.hm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 3px solid var(--hm-ink);
+  min-width: 0;
+  font-size: clamp(18px, 2.4vh, 23px);
+  font-size: clamp(18px, 2.4dvh, 23px);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: #fff;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out, filter 120ms ease-out;
+}
+.hm-btn svg { flex: none; width: 1.15em; height: 1.15em; }
+.hm-btn-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; }
+.hm-btn-text small { font-size: 12px; font-weight: 700; letter-spacing: 0; opacity: 0.82; }
+.hm-btn--go {
+  background: var(--hm-crimson);
+  box-shadow: 0 6px 0 var(--hm-crimson-deep), 0 16px 26px rgba(0, 0, 0, 0.38);
+}
+.hm-btn--rank {
+  background: var(--hm-cream);
+  color: var(--hm-ink);
+  box-shadow: 0 6px 0 var(--hm-cream-deep), 0 16px 26px rgba(0, 0, 0, 0.38);
+}
+.hm-btn:not(:disabled):hover { filter: brightness(1.07); transform: translateY(-2px); }
+.hm-btn--go:not(:disabled):active { transform: translateY(4px); box-shadow: 0 2px 0 var(--hm-crimson-deep), 0 6px 12px rgba(0, 0, 0, 0.3); }
+.hm-btn--rank:not(:disabled):active { transform: translateY(4px); box-shadow: 0 2px 0 var(--hm-cream-deep), 0 6px 12px rgba(0, 0, 0, 0.3); }
+.hm-btn:disabled { filter: grayscale(0.7) brightness(0.8); cursor: not-allowed; }
+.hm-btn:focus-visible,
+.hm-side:focus-visible,
+.hm-chip:focus-visible,
+.hm-seg-btn:focus-visible,
+.hm-roundbtn:focus-visible,
+.hm-lcard-go:focus-visible,
+.hm-lcard-rank:focus-visible { outline: 3px solid var(--hm-teal); outline-offset: 3px; }
+.hm-btn--tall { min-height: 86px; }
+
+/* 덜 중요한 선택지(대결 모드·탭 러너) — 투톱 아래 작게 */
+.hm-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(11, 16, 38, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: left;
+  word-break: keep-all;
+  transition: background-color 120ms ease-out, transform 100ms ease-out;
+}
+.hm-side small { display: block; margin-top: 1px; font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.6); }
+.hm-side:not(:disabled):hover { background: rgba(28, 37, 83, 0.9); }
+.hm-side:not(:disabled):active { transform: translateY(2px); }
+.hm-side:disabled { opacity: 0.5; cursor: not-allowed; }
+.hm-badge {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 176, 32, 0.18);
+  border: 1px solid rgba(255, 176, 32, 0.5);
+  color: #ffd98a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── 상단 알림 칩(공지·이벤트 배너를 한 줄로) ───────────────────── */
+.hm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(72vw, 440px);
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.8);
+  border: 1px solid rgba(255, 176, 32, 0.45);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  transition: background-color 120ms ease-out;
+}
+.hm-chip:hover { background: rgba(28, 37, 83, 0.92); }
+.hm-chip-tag {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--hm-amber);
+  color: var(--hm-ink);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.hm-chip-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-chip-arrow { flex: none; opacity: 0.55; }
+
+/* ── 도둑 포즈(준비·결과 화면) ──────────────────────────────────── */
+.hm-pose {
+  width: auto;
+  object-fit: contain;
+  user-select: none;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
+  animation: hm-bob 2.6s ease-in-out infinite;
+}
+@keyframes hm-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* 어두운 판 — 그림 위에서도 글이 읽히게(결과·리그 화면의 묶음) */
+.hm-panel {
+  border-radius: 20px;
+  background: rgba(11, 16, 38, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+/* ── 리그 선택 화면 ─────────────────────────────────────────────── */
+.hm-page-title {
+  margin: 0;
+  font-size: clamp(26px, 4vh, 38px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(5, 7, 11, 0.6);
+}
+.hm-page-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  word-break: keep-all;
+}
+/* 탭(랭킹 리그 / 연습 리그) — 고른 쪽이 크림색 알약 */
+.hm-seg {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.86);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+}
+.hm-seg-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.hm-seg-btn:hover { color: #fff; }
+.hm-seg-btn.is-active { background: var(--hm-cream); color: var(--hm-ink); }
+.hm-seg-count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.hm-seg-btn.is-active .hm-seg-count { background: var(--hm-ink); color: var(--hm-cream); }
+/* 동그란 보조 버튼(새로고침·좌우 넘기기) */
+.hm-roundbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(11, 16, 38, 0.86);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  transition: background-color 120ms ease-out, transform 100ms ease-out;
+}
+.hm-roundbtn:not(:disabled):hover { background: #1c2553; }
+.hm-roundbtn:not(:disabled):active { transform: translateY(3px); }
+.hm-roundbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.hm-dot { display: block; height: 8px; width: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.32); transition: width 150ms ease-out, background-color 150ms ease-out; }
+.hm-dot.is-active { width: 22px; background: var(--hm-amber); }
+
+/* 리그 카드 — 위쪽은 리그 삽화(16:9), 아래쪽은 크림색 판(표시줄·입력창과 같은 재질).
+   삽화가 아직 없는 리그는 위쪽에 밤하늘을 깔고 게임 배경 건물 한 채를 세운다 */
+.hm-lcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--hm-cream);
+  border: 3px solid var(--hm-ink);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.38), 0 24px 40px rgba(0, 0, 0, 0.45);
+  color: var(--hm-ink);
+  text-align: left;
+  backface-visibility: hidden;
+}
+.hm-lcard-scene {
+  position: relative;
+  flex: none;
+  height: 42.6%; /* 카드 세로/가로 = 1.32 일 때 정확히 16:9 가 되는 높이 — 삽화가 잘리지 않고 들어간다 */
+  overflow: hidden;
+  border-bottom: 3px solid var(--hm-ink);
+  /* 삽화를 받는 동안 보이는 바탕 — 밤하늘색 */
+  background: linear-gradient(180deg, #070a1c 0%, #141a44 62%, #2a2c63 100%);
+}
+/* 삽화: 위쪽 칸을 꽉 채운다(비율이 조금 달라도 가운데 기준으로 잘린다) */
+.hm-lcard-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+.hm-lcard-badges {
+  position: absolute;
+  inset: 10px 10px auto 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hm-lcard-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.hm-lcard-tag--soon { border-color: rgba(255, 176, 32, 0.7); color: #ffd98a; }
+.hm-lcard-tag--beginner { border-color: rgba(125, 211, 252, 0.7); color: #bae6fd; }
+.hm-lcard-tag--level { margin-left: auto; }
+.hm-lcard-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 14px;
+}
+.hm-lcard-name {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.hm-lcard-desc {
+  margin: 6px 0 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--hm-muted);
+  word-break: keep-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.hm-lcard-date { margin: 4px 0 0; font-size: 11px; font-weight: 600; color: #6f6a50; }
+.hm-lcard-date.is-soon { color: #9a5b00; }
+.hm-lcard-cta { display: flex; gap: 8px; margin-top: 10px; }
+.hm-lcard-go {
+  flex: 1 1 auto;
+  min-height: 44px;
+  border-radius: 14px;
+  background: var(--hm-crimson);
+  border: 3px solid var(--hm-ink);
+  box-shadow: 0 4px 0 var(--hm-crimson-deep);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out, filter 120ms ease-out;
+}
+.hm-lcard-rank {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  min-height: 44px;
+  border-radius: 14px;
+  background: #e6e0c2;
+  border: 3px solid var(--hm-ink);
+  box-shadow: 0 4px 0 var(--hm-cream-deep);
+  color: var(--hm-ink);
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out, filter 120ms ease-out;
+}
+.hm-lcard-rank svg { width: 22px; height: 22px; }
+.hm-lcard-go:not(:disabled):hover,
+.hm-lcard-rank:hover { filter: brightness(1.07); }
+.hm-lcard-go:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--hm-crimson-deep); }
+.hm-lcard-rank:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--hm-cream-deep); }
+.hm-lcard-go:disabled { filter: grayscale(0.8) brightness(0.85); cursor: not-allowed; }
+
+/* ── 좁은 화면 ──────────────────────────────────────────────────── */
+/* 폰·좁은 창: 제목은 좌상단 로그인 줄 + 공지 칩(두 줄) 아래에서 시작하고,
+   버튼 둘은 화면 아래가 아니라 제목 바로 밑에 나란히 둔다(아래에 두면 달리는 도둑을 가린다). */
+@media (max-width: 800px) {
+  .hm-main { padding-top: 108px; }
+  .hm-main-bottom {
+    margin-top: clamp(14px, 3vh, 28px);
+    margin-top: clamp(14px, 3dvh, 28px);
+    width: min(100%, 560px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .hm-main-bottom .hm-btn { min-height: 62px; border-radius: 18px; font-size: 20px; }
+  .hm-main-center { grid-column: 1 / -1; order: 3; }
+}
+@media (max-width: 480px) {
+  .hm-twotop { gap: 10px; }
+  .hm-btn { min-height: 60px; padding: 8px 10px; border-radius: 16px; gap: 7px; }
+  .hm-btn-text small { font-size: 11px; }
+  .hm-seg-btn { padding: 8px 12px; font-size: 13px; }
+  .hm-lcard-name { font-size: 18px; }
+  .hm-lcard-desc { font-size: 12px; -webkit-line-clamp: 2; }
+}
+@media (max-width: 360px) {
+  .hm-btn,
+  .hm-main-bottom .hm-btn { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-star,
+  .hm-pose { animation: none; }
+  .hm-star { opacity: var(--hm-star-max, 0.6); }
+  .hm-btn,
+  .hm-side,
+  .hm-roundbtn,
+  .hm-lcard-go,
+  .hm-lcard-rank,
+  .hm-dot { transition: none; }
+}

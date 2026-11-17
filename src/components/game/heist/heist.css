@@ -1,0 +1,430 @@
+/* 도둑 런 게임 화면 — 올리브영 타자게임의 1920x1080 구도를 그대로 옮긴 표시줄·입력창.
+   모든 치수는 --u(= 기준 화면의 1px) 배수라 창 크기가 바뀌어도 구도가 유지된다. */
+.heist-stage {
+  --u: clamp(0.5px, min(calc(100vw / 1920), calc(100dvh / 1080)), 1.6px);
+  --heist-ink: #0b1026;
+  --heist-cream: #f3efd9;
+  --heist-cream-line: #d8d2b4;
+  --heist-muted: #5b6077;
+  --heist-crimson: #e63a58;
+  --heist-amber: #ffb020;
+  --heist-teal: #2dd4bf;
+  --heist-panel-w: min(84.3%, calc(var(--u) * 1618));
+}
+
+/* ── 상단 1줄: 홈 · 리그 이름 · TIME · SCORE · 워드마크 ───────────── */
+.heist-hud {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  padding: calc(var(--u) * 28) calc(var(--u) * 100) 0;
+  pointer-events: none;
+}
+.heist-hud > * { pointer-events: auto; }
+.heist-row1,
+.heist-row2 {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 22);
+}
+.heist-row1 { height: calc(var(--u) * 80); }
+.heist-row2 { margin-top: calc(var(--u) * 12); height: calc(var(--u) * 56); padding-left: calc(var(--u) * 22); }
+.heist-spacer { flex: 1 1 0; min-width: 0; }
+
+.heist-iconbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 80);
+  height: calc(var(--u) * 80);
+  border-radius: calc(var(--u) * 20);
+  background: var(--heist-ink);
+  border: calc(var(--u) * 3) solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  box-shadow: 0 calc(var(--u) * 5) 0 rgba(0, 0, 0, 0.35);
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+.heist-iconbtn:hover { background: #18214a; }
+.heist-iconbtn:active { transform: translateY(calc(var(--u) * 3)); }
+.heist-iconbtn:focus-visible,
+.heist-enter:focus-visible,
+.heist-chip:focus-visible,
+.heist-slot:focus-visible { outline: 3px solid var(--heist-teal); outline-offset: 2px; }
+.heist-iconbtn svg { width: 56%; height: 56%; }
+.heist-iconbtn--sm { width: calc(var(--u) * 64); height: calc(var(--u) * 64); border-radius: calc(var(--u) * 16); }
+
+.heist-title {
+  min-width: 0;
+  max-width: calc(var(--u) * 560);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(var(--u) * 42);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 calc(var(--u) * 3) 0 rgba(5, 7, 11, 0.55);
+}
+
+.heist-pill {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 16);
+  height: calc(var(--u) * 64);
+  min-width: calc(var(--u) * 340);
+  padding: 0 calc(var(--u) * 12) 0 calc(var(--u) * 26);
+  border-radius: calc(var(--u) * 18);
+  background: var(--heist-cream);
+  border: calc(var(--u) * 3) solid var(--heist-ink);
+  box-shadow: 0 calc(var(--u) * 5) 0 rgba(0, 0, 0, 0.3);
+}
+.heist-pill-label {
+  font-size: calc(var(--u) * 22);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--heist-muted);
+}
+.heist-pill-value {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  height: calc(var(--u) * 44);
+  min-width: calc(var(--u) * 170);
+  border-radius: calc(var(--u) * 12);
+  background: #fff;
+  font-family: 'Bangers', system-ui, cursive;
+  font-size: calc(var(--u) * 36);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--heist-ink);
+  font-variant-numeric: tabular-nums;
+}
+.heist-pill-value.is-low { color: var(--heist-crimson); }
+.heist-pill-bonus { margin-left: calc(var(--u) * 6); font-size: 0.6em; color: #0f7a50; }
+
+.heist-chip {
+  flex: none;
+  max-width: calc(var(--u) * 300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  height: calc(var(--u) * 56);
+  padding: 0 calc(var(--u) * 22);
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.82);
+  border: calc(var(--u) * 2) solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: max(11px, calc(var(--u) * 22));
+  font-weight: 800;
+}
+.heist-chip--event { border-color: rgba(45, 212, 191, 0.6); color: #b9fff3; }
+/* 워드마크 = 제목 로고 그림(사장 생성본) */
+.heist-wordmark {
+  flex: none;
+  height: calc(var(--u) * 78);
+  width: auto;
+  user-select: none;
+}
+
+/* 소리 조절 — 스피커 버튼 아래로 열리는 작은 판(효과음·배경음 음량, 전체 끄기). 손으로 끌어야 해서 치수는 px 고정 */
+.heist-sound { position: relative; flex: none; }
+.heist-sound-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--heist-cream);
+  border: 3px solid var(--heist-ink);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  color: var(--heist-ink);
+}
+.heist-sound-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 26px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.heist-sound-row input[type='range'] { width: 100%; min-width: 0; height: 24px; accent-color: var(--heist-crimson); cursor: pointer; }
+.heist-sound-row input[type='range']:disabled { opacity: 0.4; cursor: not-allowed; }
+.heist-sound-row output { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--heist-muted); }
+.heist-sound-mute {
+  min-height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid var(--heist-cream-line);
+  color: var(--heist-ink);
+  font-size: 13px;
+  font-weight: 800;
+  transition: background-color 120ms ease-out;
+}
+.heist-sound-mute:hover { background: #f7f4e6; }
+.heist-sound-mute.is-on { background: var(--heist-ink); border-color: var(--heist-ink); color: #fff; }
+.heist-sound-mute:focus-visible,
+.heist-sound-row input[type='range']:focus-visible { outline: 3px solid var(--heist-teal); outline-offset: 2px; }
+
+/* ── 상단 2줄: SPEED 게이지 · 콤보 · 방어막 · 하트 ──────────────── */
+.heist-speed {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: calc(var(--u) * 40);
+  width: calc(var(--u) * 345);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 calc(var(--u) * 4) 0 rgba(0, 0, 0, 0.28);
+}
+.heist-speed-label {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 8);
+  height: 100%;
+  padding: 0 calc(var(--u) * 14) 0 calc(var(--u) * 6);
+  border-radius: 999px 0 0 999px;
+  background: var(--heist-crimson);
+  color: #fff;
+  font-size: calc(var(--u) * 22);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+.heist-speed-dial {
+  width: calc(var(--u) * 46);
+  height: calc(var(--u) * 46);
+  margin-left: calc(var(--u) * -12);
+  border-radius: 50%;
+  background: var(--heist-ink);
+  border: calc(var(--u) * 3) solid #fff;
+  display: grid;
+  place-items: center;
+}
+.heist-speed-dial svg { width: 62%; height: 62%; }
+.heist-speed-track { flex: 1 1 auto; height: 100%; border-radius: 0 999px 999px 0; overflow: hidden; }
+.heist-speed-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--heist-crimson), #ff7a3d);
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
+}
+
+.heist-combo {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 8);
+  font-family: 'Bangers', system-ui, cursive;
+  font-size: calc(var(--u) * 42);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 calc(var(--u) * 3) 0 rgba(5, 7, 11, 0.6);
+}
+.heist-combo.is-hot { color: var(--heist-amber); }
+.heist-combo small { font-size: 0.5em; opacity: 0.85; }
+.heist-combo-tag { font-family: inherit; font-size: 0.55em; letter-spacing: 0.08em; opacity: 0.8; }
+
+.heist-hearts { display: flex; align-items: center; gap: calc(var(--u) * 10); }
+.heist-heart {
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 50);
+  height: calc(var(--u) * 50);
+  border-radius: 50%;
+  background: var(--heist-crimson);
+  box-shadow: 0 calc(var(--u) * 4) 0 rgba(0, 0, 0, 0.3);
+}
+.heist-heart svg { width: 56%; height: 56%; fill: #fff; }
+.heist-heart.is-empty { background: rgba(255, 255, 255, 0.16); box-shadow: none; }
+.heist-heart.is-empty svg { fill: rgba(255, 255, 255, 0.35); }
+.heist-shield {
+  font-size: calc(var(--u) * 26);
+  font-weight: 900;
+  color: #8fe3ff;
+  text-shadow: 0 calc(var(--u) * 2) 0 rgba(5, 7, 11, 0.6);
+}
+
+/* ── 하단: 아이템 칸 · 뜻 탭 · 입력창 ───────────────────────────── */
+.heist-bottom {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: calc(var(--u) * 37);
+}
+.heist-toastslot { position: relative; width: var(--heist-panel-w); height: calc(var(--u) * 70); }
+.heist-tabrow {
+  width: var(--heist-panel-w);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: calc(var(--u) * 18);
+}
+.heist-slots { display: flex; gap: calc(var(--u) * 10); padding-bottom: calc(var(--u) * 10); }
+.heist-slot {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 64);
+  height: calc(var(--u) * 64);
+  border-radius: calc(var(--u) * 14);
+  background: rgba(11, 16, 38, 0.82);
+  border: calc(var(--u) * 2) solid rgba(255, 255, 255, 0.3);
+  font-size: calc(var(--u) * 34);
+  line-height: 1;
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+.heist-slot:not(:disabled):hover { background: #1c2553; transform: translateY(calc(var(--u) * -3)); }
+.heist-slot:disabled { opacity: 0.45; cursor: not-allowed; }
+.heist-slot-key {
+  position: absolute;
+  right: calc(var(--u) * 5);
+  bottom: calc(var(--u) * 2);
+  font-size: max(9px, calc(var(--u) * 15));
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.6);
+}
+.heist-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 14);
+  min-width: calc(var(--u) * 646);
+  max-width: calc(var(--u) * 900);
+  height: calc(var(--u) * 54);
+  padding: 0 calc(var(--u) * 40);
+  border-radius: calc(var(--u) * 20) calc(var(--u) * 20) 0 0;
+  background: var(--heist-ink);
+  color: #fff;
+  font-size: max(12px, calc(var(--u) * 28));
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.heist-tab b { color: var(--heist-amber); font-weight: 900; }
+.heist-tab span { overflow: hidden; text-overflow: ellipsis; }
+/* 아이템 목록 — 입력창 윗변에 붙는 어두운 한 줄 띠(뜻 탭이 그 위에 얹힌다) */
+.heist-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 14);
+  width: calc(var(--heist-panel-w) - var(--u) * 60);
+  height: calc(var(--u) * 36);
+  margin: 0;
+  padding: 0 calc(var(--u) * 18);
+  border-radius: calc(var(--u) * 14) calc(var(--u) * 14) 0 0;
+  background: var(--heist-ink);
+  font-size: max(9px, calc(var(--u) * 16));
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.86);
+  user-select: none;
+  pointer-events: none;
+}
+.heist-legend > span { flex: none; }
+.heist-legend .is-bad { color: #ffb3bf; }
+.heist-item-icon { display: inline-block; width: 1.35em; height: 1.35em; margin-right: 0.15em; object-fit: contain; vertical-align: -0.3em; }
+.heist-slot-icon { width: 72%; height: 72%; object-fit: contain; }
+.heist-legend b { flex: none; font-weight: 800; color: rgba(255, 255, 255, 0.55); }
+.heist-legend b + span ~ b { margin-left: calc(var(--u) * 10); }
+
+.heist-inputbar {
+  width: var(--heist-panel-w);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 18);
+  height: calc(var(--u) * 104);
+  padding: 0 calc(var(--u) * 14) 0 calc(var(--u) * 30);
+  border-radius: calc(var(--u) * 26);
+  background: var(--heist-cream);
+  border: calc(var(--u) * 4) solid var(--heist-ink);
+  box-shadow: 0 calc(var(--u) * 8) 0 rgba(0, 0, 0, 0.35);
+}
+.heist-inputbar-label {
+  flex: none;
+  font-size: max(12px, calc(var(--u) * 26));
+  font-weight: 900;
+  color: var(--heist-ink);
+  white-space: nowrap;
+}
+.heist-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(var(--u) * 72);
+  border-radius: calc(var(--u) * 16);
+  background: #fff;
+  border: calc(var(--u) * 2) solid var(--heist-cream-line);
+  color: var(--heist-ink);
+  font-size: max(16px, calc(var(--u) * 38));
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.heist-input::placeholder { color: #6f6a50; font-weight: 600; font-size: 0.68em; }
+.heist-input:focus { border-color: var(--heist-teal); box-shadow: 0 0 0 calc(var(--u) * 4) rgba(45, 212, 191, 0.28); }
+.heist-input.is-warn,
+.heist-input.is-warn:focus { border-color: var(--heist-crimson); box-shadow: 0 0 0 calc(var(--u) * 4) rgba(230, 58, 88, 0.25); }
+.heist-enter {
+  flex: none;
+  height: calc(var(--u) * 72);
+  padding: 0 calc(var(--u) * 30);
+  border-radius: calc(var(--u) * 16);
+  background: var(--heist-crimson);
+  color: #fff;
+  font-size: max(12px, calc(var(--u) * 26));
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 calc(var(--u) * 5) 0 #a81f3b;
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+}
+.heist-enter:active { transform: translateY(calc(var(--u) * 4)); box-shadow: 0 calc(var(--u) * 1) 0 #a81f3b; }
+
+/* ── 좁은 화면(폰 세로) — 덜 중요한 것부터 접는다 ─────────────── */
+@media (max-width: 760px) {
+  .heist-stage { --u: 0.62px; --heist-panel-w: calc(100% - 20px); }
+  .heist-hud { padding: 8px 10px 0; }
+  .heist-title,
+  .heist-wordmark,
+  .heist-chip,
+  .heist-spacer,
+  .heist-legend,
+  .heist-combo-tag,
+  .heist-inputbar-label { display: none; }
+  .heist-row1,
+  .heist-row2 { gap: 8px; }
+  .heist-row2 { padding-left: 0; }
+  .heist-pill { flex: 1 1 0; min-width: 0; padding: 0 6px 0 10px; gap: 6px; }
+  .heist-pill-value { min-width: 0; }
+  .heist-row2 { justify-content: space-between; }
+  .heist-speed { width: calc(var(--u) * 190); }
+  .heist-hearts { gap: 3px; }
+  .heist-heart { width: calc(var(--u) * 33); height: calc(var(--u) * 33); }
+  .heist-tabrow { grid-template-columns: auto 1fr; }
+  .heist-tab { min-width: 0; padding: 0 12px; }
+  .heist-bottom { padding-bottom: 10px; }
+  .heist-inputbar { padding-left: calc(var(--u) * 14); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heist-iconbtn,
+  .heist-slot,
+  .heist-enter,
+  .heist-input { transition: none; }
+}
+
+/* 소리 조절 판이 열려 있는 동안은 표시줄을 떨어지는 단어(z-30)보다 앞에 둔다 — 판 위로 단어가 지나가지 않게 */
+.heist-hud:has(.heist-sound-panel) { z-index: 35; }

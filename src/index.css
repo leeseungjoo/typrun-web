@@ -212,3 +212,7 @@ body {
 .topbtn-event {
   @apply border-emerald-400/40 bg-emerald-400/15 text-emerald-200 hover:bg-emerald-400/25 hover:text-emerald-100;
 }
+/* 눈에 띄어야 하는 상단 버튼(메인의 타자 테스트) — 작아도 묻히지 않게 노란 테두리 */
+.topbtn-accent {
+  @apply border-accent/70 bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent;
+}
