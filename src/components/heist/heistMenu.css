@@ -201,6 +201,18 @@
 .hm-lcard-go:focus-visible,
 .hm-lcard-rank:focus-visible { outline: 3px solid var(--hm-teal); outline-offset: 3px; }
 .hm-btn--tall { min-height: 86px; }
+/* 좁은 줄에 넣는 납작한 버튼(랭킹 맨 위 줄의 게임 시작 등) — 모양은 같고 크기·그림자만 줄인다.
+   .hm-btn 두 개 겹친 선택자 — 아래 폰 폭(@media 480px)의 .hm-btn 크기 규칙보다 우선해야 한다 */
+.hm-btn.hm-btn--compact {
+  min-height: 44px;
+  padding: 6px 18px;
+  border-width: 2px;
+  border-radius: 14px;
+  font-size: 16px;
+  gap: 8px;
+}
+.hm-btn--go.hm-btn--compact { box-shadow: 0 4px 0 var(--hm-crimson-deep), 0 10px 18px rgba(0, 0, 0, 0.32); }
+.hm-btn--go.hm-btn--compact:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--hm-crimson-deep), 0 4px 8px rgba(0, 0, 0, 0.3); }
 
 /* 덜 중요한 선택지(대결 모드·탭 러너) — 투톱 아래 작게 */
 .hm-side {

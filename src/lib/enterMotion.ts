@@ -20,11 +20,18 @@ const ENTER_DURATION_SPREAD_S = 0.2;
 
 export type EnterMotionProps = Required<Pick<MotionProps, 'initial' | 'animate' | 'transition'>>;
 
-/** order 번째 덩어리(0부터)의 등장 값. baseDelayS 는 앞선 덩어리들 뒤로 미룰 때 쓴다. */
+/**
+ * order 번째 덩어리(0부터)의 등장 값. baseDelayS 는 앞선 덩어리들 뒤로 미룰 때 쓴다.
+ *
+ * 위치는 `y` 가 아니라 `transform` 문자열로 준다 — framer-motion 11 은 opacity·transform 만 브라우저 애니메이션(합성 스레드)으로 돌린다.
+ * `y` 로 주면 스크립트가 매 프레임 위치를 써서 크롬이 글자를 정수 픽셀에 맞춰 그리고, expo 꼬리(1px 미만씩 움직이는 1초 남짓)에
+ * 글자가 1px 씩 툭툭 올라가 '떨리며 올라오는' 것처럼 보였다(2026-11-18 리그 이름 실측: 24.98→23.80→22.90→21.96→21.00→20.01→19.02).
+ */
 export function enterMotion(order: number, baseDelayS = 0): EnterMotionProps {
+  const fromY = ENTER_Y_MIN_PX + Math.random() * ENTER_Y_SPREAD_PX;
   return {
-    initial: { opacity: 0, y: ENTER_Y_MIN_PX + Math.random() * ENTER_Y_SPREAD_PX },
-    animate: { opacity: 1, y: 0 },
+    initial: { opacity: 0, transform: `translateY(${fromY.toFixed(1)}px)` },
+    animate: { opacity: 1, transform: 'translateY(0px)' },
     transition: {
       duration: ENTER_DURATION_MIN_S + Math.random() * ENTER_DURATION_SPREAD_S,
       ease: EXPO_OUT,

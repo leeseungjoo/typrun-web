@@ -7,7 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { pickProfileImage } from '../api/auth';
 import ContactModal from '../components/ContactModal';
+import { PlayIcon } from '../components/heist/HeistIcons';
+import '../components/heist/heistMenu.css';
 import { ENTER_STAGGER_S, useEnterMotion } from '../lib/enterMotion';
+import { SITE_THEME } from '../lib/theme';
 import type { Category, RankingEntry, BattleRankEntry } from '../api/types';
 
 function relativeTime(input: string, t: TFunction): string {
@@ -143,8 +146,9 @@ export default function RankingsPage() {
       {/* 헤더 — 홈은 공용 상단바(우상단)에 있으므로 제목만 */}
       <h2 className="text-2xl font-bold tracking-tight text-center mb-4">🏆 {t('rankings.title')}</h2>
 
-      {/* 뷰 탭(점수/배틀) + 우측 홈·새로고침 */}
-      <div className="mb-5 flex items-center justify-center gap-2">
+      {/* 뷰 탭(점수/배틀) + 홈·새로고침 + 게임 시작 — 랭킹이 길면 맨 아래 버튼이 안 보여 맨 위 줄로 올렸다(2026-11-18 사장).
+          폰은 게임 시작이 다음 줄 전체 폭 */}
+      <div className="mb-5 flex flex-wrap items-center justify-center gap-2">
         <div className="flex flex-1 max-w-xs rounded-full border border-white/15 bg-white/5 p-1">
           <RankTab active={view === 'score'} onClick={() => setView('score')} label={`🏅 ${t('rankings.tabScore')}`} />
           <RankTab active={view === 'battle'} onClick={() => setView('battle')} label={`⚔️ ${t('rankings.tabBattle')}`} />
@@ -165,6 +169,11 @@ export default function RankingsPage() {
         >
           ↻
         </button>
+        {/* 점수 탭 = 보고 있는 리그로 바로 시작(예전 '도전하기'), 배틀 탭 = 리그 선택(메인의 게임 시작과 같음) */}
+        <StartButton
+          className="w-full sm:w-auto"
+          onClick={() => nav(view === 'score' && current ? `/game/${current.seq}` : '/league')}
+        />
       </div>
 
       {view === 'score' ? (
@@ -218,11 +227,6 @@ export default function RankingsPage() {
 
           {showActions && (
             <motion.div {...actionsEnter} className="flex flex-wrap items-center justify-center gap-3 mt-8">
-              {current && (
-                <button className="btn-primary" onClick={() => nav(`/game/${current.seq}`)}>
-                  🎮 {t('rankings.challenge')}
-                </button>
-              )}
               <button className="btn-ghost" onClick={() => nav('/league')}>{t('rankings.selectLeague')}</button>
               <button className="btn-ghost" onClick={() => setShowContact(true)}>🤝 {t('rankings.inquiry')}</button>
             </motion.div>
@@ -257,6 +261,24 @@ function RankTab({ active, onClick, label }: { active: boolean; onClick: () => v
       }`}
     >
       {label}
+    </button>
+  );
+}
+
+/** 게임 시작 — 메인 메뉴의 '게임 시작'과 같은 버튼(도둑 런 테마는 빨간 hm-btn 을 납작하게) */
+function StartButton({ onClick, className = '' }: { onClick: () => void; className?: string }) {
+  const { t } = useTranslation();
+  if (SITE_THEME !== 'heist') {
+    return (
+      <button type="button" className={`btn-primary ${className}`} onClick={onClick}>
+        🎮 {t('main.start')}
+      </button>
+    );
+  }
+  return (
+    <button type="button" className={`hm-btn hm-btn--go hm-btn--compact ${className}`} onClick={onClick}>
+      <PlayIcon />
+      {t('main.start')}
     </button>
   );
 }
@@ -553,7 +575,7 @@ function ScoreRankings({
         <Enter baseDelay={baseDelay} className="text-center py-16">
           <p className="text-white/50 mb-2">{t('rankings.noScoreRecord')}</p>
           <p className="text-white/40 text-sm mb-6">{t('rankings.beFirst')}</p>
-          <button className="btn-primary" onClick={onPlay}>🎮 {t('rankings.challenge')}</button>
+          <StartButton onClick={onPlay} />
         </Enter>
       ) : (
         <>
