@@ -28,6 +28,7 @@ interface GameResult {
   wpm: number;
   play_time_sec: number;
   items_used: number;
+  client_hash?: string; // 판 키 — 같은 판을 다시 보내도 서버가 한 번만 저장한다(옛 결과에는 없음)
 }
 
 function isGameResult(v: unknown): v is GameResult {

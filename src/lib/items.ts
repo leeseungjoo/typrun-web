@@ -1,5 +1,7 @@
 // 아이템 정의 — 단판(GamePage)·배틀(useBattleEngine) 공용 단일 소스.
 // positive 플래그가 핵심: 배틀에선 positive=자기 버프, negative(positive:false)=상대 공격으로 발사한다.
+// ⚠ 부스터 배율·저격/폭탄 점수·콤보부스트·시간연장은 API 서버의 점수 검증(typrain-server/src/lib/scoreGuard.ts)에
+//   사본이 있다. 더 후하게 바꾸면 서버 사본도 같이 바꿔 먼저 배포할 것 — 안 그러면 정상 기록이 저장 거부된다.
 
 export type ItemEffect =
   // 슬롯 (1~5 키 발동)

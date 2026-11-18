@@ -76,6 +76,7 @@ export interface ScoreSaveResponse {
   season_seq: number;
   rank_no: number;
   is_new_best: boolean;
+  duplicate?: boolean; // 이미 저장된 판을 다시 보낸 경우(새로고침·뒤로 가기) — 새로 저장하지 않았다
 }
 
 // 내 참여 이력 한 판

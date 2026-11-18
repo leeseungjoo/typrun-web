@@ -248,6 +248,7 @@ export default function GamePage() {
   const shieldsRef = useRef(0);
   const bonusTimeRef = useRef(0);
   const lastHitAtRef = useRef(0); // performance.now() of last successful hit
+  const itemsUsedRef = useRef(0); // 이 판에서 발동한 아이템 수(슬롯 사용 + 즉시 발동) — 결과와 함께 저장
 
   // 입력 보안 — 음성받아쓰기/붙여넣기/매크로(JS 주입) 차단용
   const inputRef = useRef<HTMLInputElement>(null);
@@ -540,7 +541,9 @@ export default function GamePage() {
         accuracy: Number(accuracy.toFixed(4)),
         wpm,
         play_time_sec: Math.round(playTime),
-        items_used: 0,
+        items_used: itemsUsedRef.current,
+        // 판 키 — 결과 화면을 새로고침하거나 뒤로 가기로 다시 열어도 서버가 같은 판을 한 번만 저장한다
+        client_hash: randomId(16),
       },
     });
   }, [phase]);
@@ -670,6 +673,7 @@ export default function GamePage() {
   };
 
   const applyEffect = (effect: ItemEffect) => {
+    itemsUsedRef.current += 1;
     switch (effect) {
       // ===== 슬롯 =====
       case 'slow_motion':
