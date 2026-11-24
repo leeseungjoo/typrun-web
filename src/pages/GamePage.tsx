@@ -15,6 +15,8 @@ import { castForLeague, parseCast, rememberCast } from '../components/game/heist
 import HeistHud from '../components/game/heist/HeistHud';
 import HeistControls from '../components/game/heist/HeistControls';
 import HeistItemIcon from '../components/game/heist/HeistItemIcon';
+import StageAnnounce from '../components/game/StageAnnounce';
+import { STAGE_ANNOUNCE_SEC, buildStagePools, stageIndexAt, stagesForLeague } from '../lib/leagueStages';
 import { SITE_THEME } from '../lib/theme';
 import { getStoredSkin } from '../components/game/runnerAssets';
 import { track } from '../lib/track';
@@ -259,6 +261,19 @@ export default function GamePage() {
   // 모드별 게임 시간 (생초보 5분, 그 외 2분)
   const gameDuration = isSuperBeginner ? SUPER_GAME_DURATION : GAME_DURATION;
 
+  // 리그 단계(lib/leagueStages) — 단계가 있는 리그는 경과 시간에 맞는 묶음에서만 단어를 뽑는다. 없는 리그는 전체에서.
+  const stages = useMemo(() => stagesForLeague(catInfo?.code), [catInfo]);
+  const stagePools = useMemo(() => (stages ? buildStagePools(words, stages) : null), [words, stages]);
+  const pickWord = (atSec: number): Word => {
+    const pool = stages && stagePools ? stagePools[stageIndexAt(stages, atSec)] : words;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
+  const stageIndex = stages ? stageIndexAt(stages, elapsed) : -1;
+  // 다음 단계가 열릴 때 알림음(첫 단계는 게임 시작음과 겹치므로 제외)
+  useEffect(() => {
+    if (phase === 'playing' && stageIndex > 0) sound.play('start');
+  }, [stageIndex, phase]);
+
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { comboRef.current = combo; }, [combo]);
   useEffect(() => { effectsRef.current = effects; }, [effects]);
@@ -391,7 +406,7 @@ export default function GamePage() {
     let effectsTickAcc = 0;
 
     const spawnOne = (speed: number) => {
-      const w = words[Math.floor(Math.random() * words.length)];
+      const w = pickWord(tAcc);
       const withItem = Math.random() < ITEM_DROP_CHANCE;
       setActive((prev) => [
         ...prev,
@@ -496,7 +511,7 @@ export default function GamePage() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [phase, words, isPractice, isSuperBeginner]);
+  }, [phase, words, stagePools, isPractice, isSuperBeginner]);
 
   // HP 0 → 종료
   useEffect(() => {
@@ -769,7 +784,7 @@ export default function GamePage() {
         const fresh: ActiveWord[] = [];
         const spawnY = spawnTopPct();
         for (let i = 0; i < WORD_BURST_COUNT; i++) {
-          const w = words[Math.floor(Math.random() * words.length)];
+          const w = pickWord(tNow);
           fresh.push({
             id: newId(),
             word: w,
@@ -871,6 +886,10 @@ export default function GamePage() {
 
   // playing
   const timeLeft = Math.max(0, Math.ceil(gameDuration + bonusTime - elapsed));
+  // 단계 안내 — 단계가 열린 뒤 몇 초만 보여 준다(경과 시간에서 바로 계산, 따로 상태를 두지 않는다)
+  const currentStage = stages && stageIndex >= 0 ? stages[stageIndex] : null;
+  const announcedStage =
+    phase === 'playing' && currentStage && elapsed - currentStage.startSec < STAGE_ANNOUNCE_SEC ? currentStage : null;
   const comboMul = combo > 0 ? combo * tierFactor(combo) : 0;
 
   // 입력칸 — 두 레이아웃(기존·도둑 런)이 같은 요소를 쓴다. 보안 핸들러(음성·붙여넣기·매크로 차단)는 한 곳에만 둔다
@@ -1114,6 +1133,9 @@ export default function GamePage() {
 
         {/* effectsTick 사용해서 남은시간 표시 갱신 (참조만) */}
         <span className="hidden">{effectsTick}</span>
+
+        {/* 단계 안내 — 단어 목록보다 먼저 그려 단어가 배너 위로 지나간다 */}
+        <StageAnnounce stage={announcedStage} stageIndex={stageIndex} stageCount={stages?.length ?? 0} isHeist={isHeist} />
 
         <AnimatePresence>
           {active.map((a) => (
