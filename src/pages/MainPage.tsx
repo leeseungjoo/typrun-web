@@ -9,7 +9,7 @@ import ContactModal from '../components/ContactModal';
 import Footer from '../components/Footer';
 import BannerSlot from '../components/BannerSlot';
 import RunnerScene from '../components/game/RunnerScene';
-import { PlayIcon, TrophyIcon } from '../components/heist/HeistIcons';
+import { KeyboardIcon, PlayIcon, TrophyIcon } from '../components/heist/HeistIcons';
 import '../components/heist/heistMenu.css';
 import { SITE_THEME } from '../lib/theme';
 import { sound } from '../lib/sound';
@@ -101,14 +101,16 @@ export default function MainPage() {
     </>
   );
 
-  // ── 도둑 런 메인(대기화면) — 올리브영 타이틀 구도: 가운데 위 큰 제목, 가운데에서 도둑이 달리고,
-  //    아래 바닥 띠의 좌우에 [게임 시작] [랭킹]. 달리는 장면은 전역 배경(HeistBackdrop)이 화면 전체에 그린다.
-  //    로그인·공지(좌상단), 타자 테스트(우상단)는 전역 TopBar. 좁은 화면에서는 버튼이 제목 바로 밑으로 올라간다(CSS).
+  // ── 도둑 런 메인(대기화면) — 가운데 위 큰 제목, 가운데에서 도둑이 달리고,
+  //    아래 바닥 띠에 [랭킹] [게임 시작] [타자 테스트] 세 버튼(게임 시작이 가운데). 달리는 장면은 전역 배경(HeistBackdrop)이 그린다.
+  //    타자 테스트를 우상단 작은 버튼으로 뺐더니 사용이 하루 20~50회 → 0~2회로 줄어 메인으로 되돌렸다(2026-11-27 사장).
+  //    로그인·공지(좌상단)는 전역 TopBar. 좁은 화면에서는 버튼이 제목 바로 밑으로 올라간다(CSS).
   if (isHeist) {
     const go = (to: string) => () => {
       sound.play('click');
       nav(to);
     };
+    const hasNotes = isTouch || Boolean(loginPrompt) || Boolean(emailWarning);
     return (
       <div className="relative min-h-[100dvh] flex flex-col">
         <main className="hm-main">
@@ -141,18 +143,9 @@ export default function MainPage() {
             {seasonLine && <span className="hm-tagline-season">{seasonLine}</span>}
           </motion.p>
 
-          <motion.div
-            className="hm-main-bottom"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.28 }}
-          >
-            <button type="button" className="hm-btn hm-btn--go" onClick={go('/league')}>
-              <PlayIcon />
-              {t('main.start')}
-            </button>
-            {/* 가운데 칸 = 달리는 도둑의 발밑 — 작은 안내만 둔다 */}
-            <div className="hm-main-center">
+          {/* 작은 안내(탭 러너·로그인·이메일 경고) — 넓은 화면은 제목 아래, 좁은 화면은 버튼 아래(CSS order) */}
+          {hasNotes && (
+            <div className="hm-main-notes">
               {isTouch && (
                 <button type="button" className="hm-side" onClick={go('/tap')}>
                   {t('main.tapRunner')}
@@ -162,9 +155,25 @@ export default function MainPage() {
               {loginPrompt && <p className="hm-main-note">{loginPrompt}</p>}
               {emailWarning}
             </div>
+          )}
+
+          <motion.div
+            className="hm-main-bottom"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.28 }}
+          >
             <button type="button" className="hm-btn hm-btn--rank" onClick={go('/rankings')}>
               <TrophyIcon />
               {t('main.rankingShort')}
+            </button>
+            <button type="button" className="hm-btn hm-btn--go hm-main-go" onClick={go('/league')}>
+              <PlayIcon />
+              {t('main.start')}
+            </button>
+            <button type="button" className="hm-btn hm-btn--rank" onClick={go('/test')} title={t('main.speedTest')}>
+              <KeyboardIcon />
+              {t('main.typingTestShort')}
             </button>
           </motion.div>
         </main>

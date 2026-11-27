@@ -113,31 +113,35 @@
 }
 .hm-tagline-season { color: var(--hm-amber); font-weight: 800; }
 
-/* 아래 줄: [게임 시작] · (도둑 발밑: 안내) · [랭킹] — 올리브영 버튼 자리(가로 16~35% / 65~84%)에 맞춘 3칸 */
+/* 아래 줄: [랭킹] · [게임 시작] · [타자 테스트] — 게임 시작이 가운데(도둑 발밑)이고 조금 더 넓다 */
 .hm-main-bottom {
   margin-top: auto;
-  width: min(100%, max(68vw, 640px));
+  width: min(100%, max(72vw, 660px));
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
+  gap: clamp(12px, 1.6vw, 22px);
   padding-bottom: clamp(2px, 1vh, 14px);
   padding-bottom: clamp(2px, 1dvh, 14px);
 }
+/* 글자 크기는 창 높이와 폭 중 빠듯한 쪽에 맞춘다 — 세 칸이라 폭이 좁으면 '타자 테스트'가 두 줄로 꺾인다 */
 .hm-main-bottom .hm-btn {
   min-height: clamp(60px, 10vh, 108px);
   min-height: clamp(60px, 10dvh, 108px);
   border-radius: clamp(18px, 2.6vh, 30px);
   border-radius: clamp(18px, 2.6dvh, 30px);
-  font-size: clamp(20px, 3.2vh, 34px);
-  font-size: clamp(20px, 3.2dvh, 34px);
+  font-size: clamp(18px, min(3.2vh, 2.2vw), 34px);
+  font-size: clamp(18px, min(3.2dvh, 2.2vw), 34px);
 }
-.hm-main-center {
+/* 작은 안내 묶음(탭 러너·로그인·이메일 경고) — 넓은 화면에서는 제목 아래 */
+.hm-main-notes {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  margin-top: clamp(6px, 1.2vh, 12px);
+  margin-top: clamp(6px, 1.2dvh, 12px);
 }
 /* 안내 한 줄 — 달리는 장면 위에 얹히므로 어두운 바탕을 깐다 */
 .hm-main-note {
@@ -494,7 +498,8 @@
 
 /* ── 좁은 화면 ──────────────────────────────────────────────────── */
 /* 폰·좁은 창: 제목은 좌상단 로그인 줄 + 공지 칩(두 줄) 아래에서 시작하고,
-   버튼 둘은 화면 아래가 아니라 제목 바로 밑에 나란히 둔다(아래에 두면 달리는 도둑을 가린다). */
+   버튼은 화면 아래가 아니라 제목 바로 밑에 둔다(아래에 두면 달리는 도둑을 가린다).
+   게임 시작이 윗줄 전체, 그 아래 랭킹 · 타자 테스트가 나란히. 작은 안내는 버튼 아래로 내린다. */
 @media (max-width: 800px) {
   .hm-main { padding-top: 108px; }
   .hm-main-bottom {
@@ -504,8 +509,9 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
   }
-  .hm-main-bottom .hm-btn { min-height: 62px; border-radius: 18px; font-size: 20px; }
-  .hm-main-center { grid-column: 1 / -1; order: 3; }
+  .hm-main-bottom .hm-btn { min-height: 58px; border-radius: 18px; font-size: 19px; }
+  .hm-main-bottom .hm-main-go { grid-column: 1 / -1; order: -1; min-height: 64px; font-size: 22px; }
+  .hm-main-notes { order: 1; margin-top: 12px; }
 }
 @media (max-width: 480px) {
   .hm-twotop { gap: 10px; }
@@ -514,6 +520,10 @@
   .hm-seg-btn { padding: 8px 12px; font-size: 13px; }
   .hm-lcard-name { font-size: 18px; }
   .hm-lcard-desc { font-size: 12px; -webkit-line-clamp: 2; }
+}
+/* 좁은 폰: 두 칸에 나란히 선 랭킹 · 타자 테스트가 두 줄로 꺾이지 않게 글자·여백을 줄인다 */
+@media (max-width: 400px) {
+  .hm-main-bottom .hm-btn:not(.hm-main-go) { font-size: 17px; gap: 6px; padding-inline: 8px; }
 }
 @media (max-width: 360px) {
   .hm-btn,

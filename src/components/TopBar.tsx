@@ -10,7 +10,7 @@ import BannerSlot from './BannerSlot';
 /**
  * 전 페이지 공용 상단 바 (App 레벨 고정).
  * - 좌측: 로그인/프로필 + (활성 이벤트 시) 초대 버튼, 메인에서는 그 아래 공지 알림 칩
- * - 우측: 언어 토글(EN/KR) + 홈 버튼 (홈 화면에선 홈 대신 타자 테스트)
+ * - 우측: 언어 토글(EN/KR) + 홈 버튼(홈 화면에선 숨김)
  * 게임/로그인/결과 등 집중 화면에서는 숨기고, 그 화면들이 자체 배치한다.
  */
 const NAV_PREFIXES = ['/league', '/rankings', '/profile', '/insider'];
@@ -38,7 +38,7 @@ export default function TopBar() {
   const onInsider = path.startsWith('/insider');
   const cur: AppLocale = i18n.language?.startsWith('en') ? 'en' : 'ko';
 
-  // 도둑 런 메인(올리브영 타이틀 구도): 공지 알림은 좌상단, 타자 테스트는 우상단으로 뺀다(2026-11-17 사장)
+  // 도둑 런 메인: 공지 알림은 좌상단 칩으로 둔다(2026-11-17 사장)
   const isHeistHome = isHome && SITE_THEME === 'heist';
 
   return (
@@ -88,14 +88,9 @@ export default function TopBar() {
         {isHeistHome && !loading && <BannerSlot slot="main" isMember={!!user} variant="chip" className="pointer-events-auto" />}
       </div>
 
-      {/* 우측: 언어 토글 + 타자 테스트(메인) / 홈(그 밖의 화면) */}
+      {/* 우측: 언어 토글 + 홈(메인이 아닌 화면). 타자 테스트는 메인 아래 큰 버튼으로 돌아갔다(2026-11-27) */}
       <div className="flex items-center gap-2 pointer-events-auto shrink-0">
         <LocaleToggle cur={cur} />
-        {isHeistHome && (
-          <button className="topbtn topbtn-accent" onClick={() => nav('/test')} title={t('main.speedTest')}>
-            {t('main.typingTest')}
-          </button>
-        )}
         {!isHome && (
           <button className="topbtn" onClick={() => nav('/')}>
             {t('topbar.home')}

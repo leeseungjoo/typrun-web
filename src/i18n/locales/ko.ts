@@ -23,6 +23,7 @@ export const ko = {
     // 도둑 런 메인(투톱 버튼·제목 아래 한 줄)
     start: '게임 시작',
     rankingShort: '랭킹',
+    typingTestShort: '타자 테스트',
     heistTagline: '단어를 치면 도둑이 달린다!',
     season: '{{year}}년 {{month}}월 시즌 진행중 · ~{{end}}',
     loginPromptPre: '🏆 랭킹에 점수 저장하려면 ',

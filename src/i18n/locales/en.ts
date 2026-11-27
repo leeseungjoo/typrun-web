@@ -24,6 +24,7 @@ export const en: Resources = {
     ranking: 'Rankings',
     start: 'Play',
     rankingShort: 'Rankings',
+    typingTestShort: 'Typing Test',
     heistTagline: 'Type the words. Outrun the guard.',
     season: 'Season {{year}}.{{month}} in progress · ~{{end}}',
     loginPromptPre: '🏆 To save your score to the rankings, ',
