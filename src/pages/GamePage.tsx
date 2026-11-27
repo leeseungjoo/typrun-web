@@ -70,7 +70,11 @@ interface ScorePopup {
 type Phase = 'loading' | 'ready' | 'playing' | 'over';
 
 // 일반 리그 한 판 길이는 lib/roundLength(12월 시즌부터 90초), 오늘의 도전은 서버가 내려준 값(60초)
-const SUPER_GAME_DURATION = 300; // 생초보: 5분 (천천히 충분히 연습)
+// 생초보(초보 리그): 2분 30초. 5분은 너무 길다는 판단으로 절반으로 줄였다(2026-11-27 사장).
+const SUPER_GAME_DURATION = 150;
+// 생초보의 속도는 예전 5분 판과 같은 빠르기로 오른다 — 판만 줄이고 이 값까지 줄이면 낙하·리젠이 두 배 빨리 빨라져
+// 초보에게 더 어려워진다. 그래서 2분 30초 판은 예전 5분 판의 앞 절반 속도까지만 간다.
+const SUPER_RAMP_SEC = 300;
 // 오늘의 도전 난수 갈래 — 한 시드에서 서로 다른 난수열 셋을 만든다(단어 순서 / 위치·아이템 / 아이템 효과).
 // 갈래를 나눠야 아이템을 쓰든 말든 떨어지는 단어 순서가 모두에게 같다.
 const DAILY_SPAWN_SALT = 0x9e3779b1;
@@ -268,7 +272,7 @@ export default function GamePage() {
   const isComposingRef = useRef(false);   // 한글 IME 조합 중 여부
   const warnTimerRef = useRef<number | null>(null);
 
-  // 모드별 게임 시간 — 오늘의 도전은 서버가 정한 길이, 생초보 5분, 그 외는 일반 리그 길이.
+  // 모드별 게임 시간 — 오늘의 도전은 서버가 정한 길이, 생초보 2분 30초, 그 외는 일반 리그 길이.
   // 일반 리그 길이는 이 화면에 들어온 순간 한 번만 정한다(판 도중에 바뀌면 낙하 속도가 튄다).
   const [rankedSec] = useState(() => rankedRoundSec());
   const gameDuration = dailyCtx ? dailyCtx.durationSec : isSuperBeginner ? SUPER_GAME_DURATION : rankedSec;
@@ -459,7 +463,8 @@ export default function GamePage() {
       effectsTickAcc += dt * 1000;
 
       const effectiveDuration = gameDuration + bonusTimeRef.current;
-      const p = Math.min(1, tAcc / effectiveDuration);
+      // 진행도(0~1) — 낙하 속도·리젠 간격이 이 값을 따라 오른다. 생초보는 판 길이가 아니라 SUPER_RAMP_SEC 기준
+      const p = Math.min(1, tAcc / (isSuperBeginner ? SUPER_RAMP_SEC : effectiveDuration));
       const spawnMul = isSuperBeginner ? SUPER_SPAWN_MUL : isPractice ? PRACTICE_SPAWN_MUL : 1;
       const fallMul = isSuperBeginner ? SUPER_SPEED_MUL : isPractice ? PRACTICE_SPEED_MUL : 1;
       const spawnMs = (SPAWN_MS_START - (SPAWN_MS_START - SPAWN_MS_MIN) * p) * spawnMul;
@@ -831,7 +836,7 @@ export default function GamePage() {
         // 즉시 N개 추가 스폰 (현재 진행도 기반 속도로)
         if (words.length === 0) break;
         const tNow = elapsed;
-        const p = Math.min(1, tNow / (gameDuration + bonusTimeRef.current));
+        const p = Math.min(1, tNow / (isSuperBeginner ? SUPER_RAMP_SEC : gameDuration + bonusTimeRef.current));
         const speed = (SPEED_START + (SPEED_MAX - SPEED_START) * p)
           * (isSuperBeginner ? SUPER_SPEED_MUL : isPractice ? PRACTICE_SPEED_MUL : 1);
         const fresh: ActiveWord[] = [];

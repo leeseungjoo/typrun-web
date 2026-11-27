@@ -18,13 +18,15 @@ export interface LeagueStage {
 /** 안내 배너가 떠 있는 시간(초) */
 export const STAGE_ANNOUNCE_SEC = 4;
 
-// 독수리 탈출 초보리그(생초보 판 길이 300초). difficulty: 1 가운뎃줄 자모 · 2 자음 · 3 모음 · 4 받침 없는 낱말 · 5 받침 있는 낱말
+// 독수리 탈출 초보리그(생초보 판 길이 150초 — GamePage 의 SUPER_GAME_DURATION. 판 길이를 바꾸면 여기 시각도 같은 비율로).
+// 2026-11-27 판을 5분 → 2분 30초로 줄이며 단계 시각도 절반으로 당겼다(0·35·70·105·190 → 0·18·35·53·95).
+// difficulty: 1 가운뎃줄 자모 · 2 자음 · 3 모음 · 4 받침 없는 낱말 · 5 받침 있는 낱말
 const EAGLE_ESCAPE_STAGES: readonly LeagueStage[] = [
   { startSec: 0, levels: [1], title: '가운뎃줄을 유심히 봐 줘', hint: '왼손은 ㅁㄴㅇㄹ, 오른손은 ㅓㅏㅣ 위에!' },
-  { startSec: 35, levels: [2], title: '지금부터는 자음 타임!', hint: '자음은 자판 왼쪽에 모여 있어' },
-  { startSec: 70, levels: [3], title: '지금부터는 모음 타임!', hint: '모음은 자판 오른쪽에 모여 있어' },
-  { startSec: 105, levels: [4], title: '간단하고 쉬운 단어부터 시작할까?', hint: '자음이랑 모음을 붙이면 글자가 돼' },
-  { startSec: 190, levels: [5, 4], title: '받침도 넣어 볼까?', hint: '받침은 맨 마지막에 누르면 돼' },
+  { startSec: 18, levels: [2], title: '지금부터는 자음 타임!', hint: '자음은 자판 왼쪽에 모여 있어' },
+  { startSec: 35, levels: [3], title: '지금부터는 모음 타임!', hint: '모음은 자판 오른쪽에 모여 있어' },
+  { startSec: 53, levels: [4], title: '간단하고 쉬운 단어부터 시작할까?', hint: '자음이랑 모음을 붙이면 글자가 돼' },
+  { startSec: 95, levels: [5, 4], title: '받침도 넣어 볼까?', hint: '받침은 맨 마지막에 누르면 돼' },
 ];
 
 const STAGES_BY_LEAGUE_CODE: Readonly<Record<string, readonly LeagueStage[]>> = {

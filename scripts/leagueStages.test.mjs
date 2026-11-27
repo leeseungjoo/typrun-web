@@ -20,8 +20,10 @@ test('독수리 탈출 리그는 5단계이고 0초부터 시간순으로 시작
   assert.equal(stages.length, 5);
   assert.equal(stages[0].startSec, 0);
   for (let i = 1; i < stages.length; i++) assert.ok(stages[i].startSec > stages[i - 1].startSec);
-  // 생초보 판 길이(300초) 안에 마지막 단계가 열려야 한다
-  assert.ok(stages[stages.length - 1].startSec < 300);
+  // 생초보 판 길이(150초) 안에 마지막 단계가 열리고, 마지막 단계에도 칠 시간이 넉넉히(40초 이상) 남아야 한다
+  assert.ok(stages[stages.length - 1].startSec <= 150 - 40);
+  // 단계마다 안내 배너(4초)가 지나고도 칠 시간이 있어야 한다
+  for (let i = 1; i < stages.length; i++) assert.ok(stages[i].startSec - stages[i - 1].startSec >= 15);
   for (const s of stages) assert.ok(s.title.length > 0 && s.levels.length > 0);
 });
 
