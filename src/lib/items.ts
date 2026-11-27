@@ -69,8 +69,9 @@ export const ITEM_POOL: ItemDef[] = [
 
 const TOTAL_WEIGHT = ITEM_POOL.reduce((sum, it) => sum + it.weight, 0);
 
-export const randomItemDef = (): ItemDef => {
-  let r = Math.random() * TOTAL_WEIGHT;
+/** 가중치에 따라 아이템 하나를 고른다. rand 를 주면 그 난수로(오늘의 도전 — 모두에게 같은 아이템이 붙게). */
+export const randomItemDef = (rand: () => number = Math.random): ItemDef => {
+  let r = rand() * TOTAL_WEIGHT;
   for (const it of ITEM_POOL) {
     r -= it.weight;
     if (r <= 0) return it;

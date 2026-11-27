@@ -8,6 +8,7 @@ import { isSyntheticEmail } from '../api/auth';
 import ContactModal from '../components/ContactModal';
 import Footer from '../components/Footer';
 import BannerSlot from '../components/BannerSlot';
+import DailyEntry from '../components/daily/DailyEntry';
 import RunnerScene from '../components/game/RunnerScene';
 import { KeyboardIcon, PlayIcon, TrophyIcon } from '../components/heist/HeistIcons';
 import '../components/heist/heistMenu.css';
@@ -110,7 +111,6 @@ export default function MainPage() {
       sound.play('click');
       nav(to);
     };
-    const hasNotes = isTouch || Boolean(loginPrompt) || Boolean(emailWarning);
     return (
       <div className="relative min-h-[100dvh] flex flex-col">
         <main className="hm-main">
@@ -143,19 +143,18 @@ export default function MainPage() {
             {seasonLine && <span className="hm-tagline-season">{seasonLine}</span>}
           </motion.p>
 
-          {/* 작은 안내(탭 러너·로그인·이메일 경고) — 넓은 화면은 제목 아래, 좁은 화면은 버튼 아래(CSS order) */}
-          {hasNotes && (
-            <div className="hm-main-notes">
-              {isTouch && (
-                <button type="button" className="hm-side" onClick={go('/tap')}>
-                  {t('main.tapRunner')}
-                  <span className="hm-badge">β</span>
-                </button>
-              )}
-              {loginPrompt && <p className="hm-main-note">{loginPrompt}</p>}
-              {emailWarning}
-            </div>
-          )}
+          {/* 오늘의 도전 + 작은 안내(탭 러너·로그인·이메일 경고) — 넓은 화면은 제목 아래, 좁은 화면은 버튼 아래(CSS order) */}
+          <div className="hm-main-notes">
+            <DailyEntry onOpen={go('/daily')} />
+            {isTouch && (
+              <button type="button" className="hm-side" onClick={go('/tap')}>
+                {t('main.tapRunner')}
+                <span className="hm-badge">β</span>
+              </button>
+            )}
+            {loginPrompt && <p className="hm-main-note">{loginPrompt}</p>}
+            {emailWarning}
+          </div>
 
           <motion.div
             className="hm-main-bottom"

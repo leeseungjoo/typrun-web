@@ -53,9 +53,11 @@ export const api = {
     return request<Season>('/current_season');
   },
 
-  // 단어 풀 + 아이템
-  words(categorySeq: number, limit = 200): Promise<WordsResponse> {
-    return request<WordsResponse>(`/words?category_seq=${categorySeq}&limit=${limit}`);
+  // 단어 풀 + 아이템. seed 를 주면(오늘의 도전) 같은 시드를 가진 모두가 같은 단어를 같은 순서로 받는다
+  words(categorySeq: number, limit = 200, seed?: number): Promise<WordsResponse> {
+    const q = new URLSearchParams({ category_seq: String(categorySeq), limit: String(limit) });
+    if (seed !== undefined) q.set('seed', String(seed));
+    return request<WordsResponse>(`/words?${q.toString()}`);
   },
 
   // 점수 저장

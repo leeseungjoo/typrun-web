@@ -21,6 +21,9 @@ import { SITE_THEME } from '../lib/theme';
 import { getStoredSkin } from '../components/game/runnerAssets';
 import { track } from '../lib/track';
 import { loadClassCtx, randomId, type ClassGameResult } from '../lib/classroomCtx';
+import { readDailyCtx, type DailyGameResult } from '../lib/dailyCtx';
+import { mulberry32 } from '../lib/rng';
+import { rankedRoundSec } from '../lib/roundLength';
 import type { Word, Category } from '../api/types';
 import {
   ITEM_POOL,
@@ -66,8 +69,12 @@ interface ScorePopup {
 
 type Phase = 'loading' | 'ready' | 'playing' | 'over';
 
-const GAME_DURATION = 120;
+// 일반 리그 한 판 길이는 lib/roundLength(12월 시즌부터 90초), 오늘의 도전은 서버가 내려준 값(60초)
 const SUPER_GAME_DURATION = 300; // 생초보: 5분 (천천히 충분히 연습)
+// 오늘의 도전 난수 갈래 — 한 시드에서 서로 다른 난수열 셋을 만든다(단어 순서 / 위치·아이템 / 아이템 효과).
+// 갈래를 나눠야 아이템을 쓰든 말든 떨어지는 단어 순서가 모두에게 같다.
+const DAILY_SPAWN_SALT = 0x9e3779b1;
+const DAILY_FX_SALT = 0x85ebca6b;
 // 연습 리그(is_ranking_league='N') 보정 — 기본 연습: 리젠을 지금보다 1.5배 빠르게
 const PRACTICE_SPAWN_MUL = 2.0 / 1.5; // ≈1.333 (기존 2.0 → 리젠 1.5배 빠르게, 간격 짧아짐)
 const PRACTICE_SPEED_MUL = 0.6;       // 낙하 속도 0.6배 (천천히)
@@ -171,7 +178,10 @@ export default function GamePage() {
     const ctx = loadClassCtx(stateClassCode);
     return ctx && ctx.categorySeq === Number(categorySeq) ? ctx : null;
   }, [stateClassCode, categorySeq]);
-  const exitPath = classCtx ? `/class/${classCtx.code}` : '/league'; // 그만두기·뒤로가기 목적지
+  // 오늘의 도전 — 도전 시작 화면이 router state 로 날짜·시드·판 길이를 넘긴다. 없거나 리그가 다르면 일반 게임.
+  const dailyCtx = useMemo(() => readDailyCtx(loc.state, Number(categorySeq)), [loc.state, categorySeq]);
+  const exitPath = classCtx ? `/class/${classCtx.code}` : dailyCtx ? '/daily' : '/league'; // 그만두기·뒤로가기 목적지
+  const exitLabel = classCtx ? t('classroom.backToClass') : dailyCtx ? t('daily.backToDaily') : t('game.chooseLeague');
   // 도둑 런 화면(올리브영 구도) — 교실 모드 게임은 항상 칠판이라 제외
   const isHeist = SITE_THEME === 'heist' && !classCtx;
   const speedFillRef = useRef<HTMLDivElement>(null); // 속도 게이지 — HeistScene 이 직접 갱신
@@ -258,15 +268,20 @@ export default function GamePage() {
   const isComposingRef = useRef(false);   // 한글 IME 조합 중 여부
   const warnTimerRef = useRef<number | null>(null);
 
-  // 모드별 게임 시간 (생초보 5분, 그 외 2분)
-  const gameDuration = isSuperBeginner ? SUPER_GAME_DURATION : GAME_DURATION;
+  // 모드별 게임 시간 — 오늘의 도전은 서버가 정한 길이, 생초보 5분, 그 외는 일반 리그 길이.
+  // 일반 리그 길이는 이 화면에 들어온 순간 한 번만 정한다(판 도중에 바뀌면 낙하 속도가 튄다).
+  const [rankedSec] = useState(() => rankedRoundSec());
+  const gameDuration = dailyCtx ? dailyCtx.durationSec : isSuperBeginner ? SUPER_GAME_DURATION : rankedSec;
+  // 오늘의 도전 난수 — 판이 시작될 때(게임 루프) 시드로 새로 만든다. 일반 게임은 null(Math.random).
+  const dailyRngRef = useRef<{ word: () => number; spawn: () => number; fx: () => number } | null>(null);
 
   // 리그 단계(lib/leagueStages) — 단계가 있는 리그는 경과 시간에 맞는 묶음에서만 단어를 뽑는다. 없는 리그는 전체에서.
-  const stages = useMemo(() => stagesForLeague(catInfo?.code), [catInfo]);
+  // 오늘의 도전은 단계를 쓰지 않는다 — 단계는 경과 시간으로 묶음을 골라, 같은 n번째 단어가 보장되지 않는다
+  const stages = useMemo(() => (dailyCtx ? null : stagesForLeague(catInfo?.code)), [catInfo, dailyCtx]);
   const stagePools = useMemo(() => (stages ? buildStagePools(words, stages) : null), [words, stages]);
-  const pickWord = (atSec: number): Word => {
+  const pickWord = (atSec: number, rand: () => number = Math.random): Word => {
     const pool = stages && stagePools ? stagePools[stageIndexAt(stages, atSec)] : words;
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pool[Math.floor(rand() * pool.length)];
   };
   const stageIndex = stages ? stageIndexAt(stages, elapsed) : -1;
   // 다음 단계가 열릴 때 알림음(첫 단계는 게임 시작음과 겹치므로 제외)
@@ -349,7 +364,7 @@ export default function GamePage() {
     if (!categorySeq) return;
     setPhase('loading');
     Promise.all([
-      api.words(Number(categorySeq), WORDS_LIMIT),
+      api.words(Number(categorySeq), WORDS_LIMIT, dailyCtx?.seed),
       api.categories(),
     ])
       .then(([res, cats]) => {
@@ -359,10 +374,11 @@ export default function GamePage() {
         }
         const cat = cats.find((c) => c.seq === Number(categorySeq));
         setCatInfo(cat ?? null);
-        const superBeginner = cat?.is_super_beginner === 'Y';
+        // 오늘의 도전은 모두 같은 조건(일반 속도)으로 친다 — 리그 설정이 바뀌어도 속도·생명이 달라지지 않게
+        const superBeginner = !dailyCtx && cat?.is_super_beginner === 'Y';
         // 연습(랭킹 미집계) 여부는 is_ranking_league 로만 정한다.
         // 생초보 속도 + 랭킹 리그(Y/Y) = 초보리그: 천천히 내려오되 점수는 랭킹에 집계된다.
-        const practice = cat?.is_ranking_league === 'N';
+        const practice = !dailyCtx && cat?.is_ranking_league === 'N';
         setIsSuperBeginner(superBeginner);
         setIsPractice(practice);
         setHp(superBeginner ? SUPER_INITIAL_HP : practice ? PRACTICE_INITIAL_HP : INITIAL_HP);
@@ -405,18 +421,32 @@ export default function GamePage() {
     let tAcc = 0;
     let effectsTickAcc = 0;
 
+    // 오늘의 도전: 시드로 만든 난수열을 쓴다 → 같은 날 같은 리그면 누구에게나 n번째 단어·위치·아이템이 같다
+    dailyRngRef.current = dailyCtx
+      ? {
+          word: mulberry32(dailyCtx.seed),
+          spawn: mulberry32((dailyCtx.seed ^ DAILY_SPAWN_SALT) >>> 0),
+          fx: mulberry32((dailyCtx.seed ^ DAILY_FX_SALT) >>> 0),
+        }
+      : null;
+
     const spawnOne = (speed: number) => {
-      const w = pickWord(tAcc);
-      const withItem = Math.random() < ITEM_DROP_CHANCE;
+      const seeded = dailyRngRef.current;
+      const rand = seeded?.spawn ?? Math.random;
+      const w = pickWord(tAcc, seeded?.word);
+      // 난수는 단어마다 항상 같은 개수(셋)를 뽑는다 — 아이템이 붙든 말든 다음 단어의 값이 밀리지 않게
+      const itemRoll = rand();
+      const x = 10 + rand() * 80;
+      const itemDef = randomItemDef(rand);
       setActive((prev) => [
         ...prev,
         {
           id: newId(),
           word: w,
-          x: 10 + Math.random() * 80,
+          x,
           y: spawnTopPct(),
           speed,
-          item: withItem ? randomItemDef() : undefined,
+          item: itemRoll < ITEM_DROP_CHANCE ? itemDef : undefined,
         },
       ]);
     };
@@ -527,6 +557,27 @@ export default function GamePage() {
     const accuracy = total === 0 ? 0 : correct / total;
     const wpm = playTime > 0 ? Math.round((correct / playTime) * 60) : 0;
 
+    // 오늘의 도전 — 월간 랭킹 저장(score_save)을 거치지 않고 그날 순위표로. client_hash = 이 판 1회 제출 키.
+    if (dailyCtx) {
+      const result: DailyGameResult = {
+        date: dailyCtx.date,
+        category_seq: dailyCtx.categorySeq,
+        category_name: catInfo?.name ?? '',
+        duration_sec: dailyCtx.durationSec,
+        score,
+        max_combo: maxCombo,
+        correct_count: correct,
+        miss_count: miss,
+        accuracy: Number(accuracy.toFixed(4)),
+        wpm,
+        play_time_sec: Math.round(playTime),
+        items_used: itemsUsedRef.current,
+        client_hash: randomId(16),
+      };
+      nav('/daily/result', { replace: true, state: { result } });
+      return;
+    }
+
     // 교실 모드 — 일반 저장(score_save)·로그인 CTA 를 거치지 않고 반 랭킹으로. resultId = 이 판 1회 제출 키.
     if (classCtx) {
       const result: ClassGameResult = {
@@ -559,6 +610,8 @@ export default function GamePage() {
         items_used: itemsUsedRef.current,
         // 판 키 — 결과 화면을 새로고침하거나 뒤로 가기로 다시 열어도 서버가 같은 판을 한 번만 저장한다
         client_hash: randomId(16),
+        // 이 판의 길이 — 결과 화면의 '내 기록'이 길이가 다른 판끼리 견주지 않게 한다
+        round_sec: gameDuration,
       },
     });
   }, [phase]);
@@ -568,7 +621,7 @@ export default function GamePage() {
   useEffect(() => {
     if (phase === 'playing' && !playTrackedRef.current) {
       playTrackedRef.current = true;
-      track('play_game', classCtx ? 'class' : isPractice ? 'practice' : isSuperBeginner ? 'beginner' : 'ranking');
+      track('play_game', classCtx ? 'class' : dailyCtx ? 'daily' : isPractice ? 'practice' : isSuperBeginner ? 'beginner' : 'ranking');
     }
   }, [phase, isPractice, isSuperBeginner]);
 
@@ -783,12 +836,13 @@ export default function GamePage() {
           * (isSuperBeginner ? SUPER_SPEED_MUL : isPractice ? PRACTICE_SPEED_MUL : 1);
         const fresh: ActiveWord[] = [];
         const spawnY = spawnTopPct();
+        const fxRand = dailyRngRef.current?.fx ?? Math.random;
         for (let i = 0; i < WORD_BURST_COUNT; i++) {
-          const w = pickWord(tNow);
+          const w = pickWord(tNow, fxRand);
           fresh.push({
             id: newId(),
             word: w,
-            x: 10 + Math.random() * 80,
+            x: 10 + fxRand() * 80,
             y: spawnY,
             speed,
           });
@@ -821,7 +875,7 @@ export default function GamePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-4">
         <p className="text-red-400">{t('game.errorPrefix', { msg: err })}</p>
-        <button className="btn-ghost" onClick={() => nav(exitPath)}>{classCtx ? t('classroom.backToClass') : t('game.chooseLeague')}</button>
+        <button className="btn-ghost" onClick={() => nav(exitPath)}>{exitLabel}</button>
       </div>
     );
   }
@@ -843,6 +897,11 @@ export default function GamePage() {
           <div className="fixed inset-0 -z-[5]" aria-hidden>
             <HeistDemoScene mood="ready" cast={cast} />
           </div>
+        )}
+        {dailyCtx && (
+          <p className="px-3 py-1 rounded-full bg-[rgba(11,16,38,0.78)] border border-amber-300/50 text-amber-200 text-sm font-extrabold [word-break:keep-all]">
+            {t('daily.readyKicker', { sec: dailyCtx.durationSec })}
+          </p>
         )}
         {catInfo && (
           <h2 className={isHeist ? 'text-3xl md:text-4xl font-black text-center [word-break:keep-all] drop-shadow-[0_3px_0_rgba(5,7,11,0.7)]' : 'text-3xl font-bold'}>
@@ -878,7 +937,7 @@ export default function GamePage() {
           <span className={isHeist ? 'text-sm font-semibold text-white/85 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]' : 'text-sm text-white/60'}>{t('game.autoStartCountdown')}</span>
         </div>
         <button className={`btn-ghost text-sm${isHeist ? ' bg-[rgba(11,16,38,0.6)]' : ''}`} onClick={() => nav(exitPath)}>
-          {classCtx ? t('classroom.backToClass') : t('game.chooseLeague')}
+          {exitLabel}
         </button>
       </div>
     );
@@ -1008,7 +1067,7 @@ export default function GamePage() {
         <HeistHud
           rootRef={hudRef}
           speedFillRef={speedFillRef}
-          title={catInfo?.name ?? ''}
+          title={dailyCtx && catInfo ? `${t('daily.title')} · ${catInfo.name}` : catInfo?.name ?? ''}
           timeLeft={timeLeft}
           bonusTime={bonusTime}
           score={score}

@@ -13,7 +13,7 @@ import BannerSlot from './BannerSlot';
  * - 우측: 언어 토글(EN/KR) + 홈 버튼(홈 화면에선 숨김)
  * 게임/로그인/결과 등 집중 화면에서는 숨기고, 그 화면들이 자체 배치한다.
  */
-const NAV_PREFIXES = ['/league', '/rankings', '/profile', '/insider'];
+const NAV_PREFIXES = ['/league', '/rankings', '/profile', '/insider', '/daily'];
 
 export default function TopBar() {
   const nav = useNavigate();

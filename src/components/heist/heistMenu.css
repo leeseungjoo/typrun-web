@@ -496,6 +496,145 @@
 .hm-lcard-rank:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--hm-cream-deep); }
 .hm-lcard-go:disabled { filter: grayscale(0.8) brightness(0.85); cursor: not-allowed; }
 
+/* ── 내 기록 한 줄(결과 화면) ───────────────────────────────────── */
+.hm-record {
+  margin: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 10px;
+  max-width: 100%;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  word-break: keep-all;
+}
+.hm-record strong { font-weight: 800; color: #fff; }
+.hm-record--best { border-color: rgba(255, 176, 32, 0.7); }
+.hm-record--best strong { color: var(--hm-amber); }
+.hm-record--up strong { color: var(--hm-teal); }
+
+/* ── 오늘의 도전 ────────────────────────────────────────────────── */
+/* 진입 버튼(메인·결과 화면) — 호박색 꼬리표가 붙은 어두운 알약 */
+.hm-daily-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.86);
+  border: 2px solid var(--hm-amber);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.34);
+  transition: background-color 120ms ease-out, transform 100ms ease-out;
+}
+.hm-daily-entry:hover { background: rgba(28, 37, 83, 0.94); transform: translateY(-1px); }
+.hm-daily-entry:active { transform: translateY(1px); }
+.hm-daily-entry:focus-visible { outline: 3px solid var(--hm-teal); outline-offset: 3px; }
+.hm-daily-entry-tag {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--hm-amber);
+  color: var(--hm-ink);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.hm-daily-entry-sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-daily-entry-streak { flex: none; color: var(--hm-amber); font-weight: 800; }
+.hm-daily-entry-arrow { flex: none; opacity: 0.6; }
+
+/* 도전 화면 머리 — 크림색 표(리그 카드와 같은 재질) */
+.hm-daily-ticket {
+  padding: 20px 22px 18px;
+  border-radius: 22px;
+  background: var(--hm-cream);
+  border: 3px solid var(--hm-ink);
+  box-shadow: 0 6px 0 var(--hm-cream-deep), 0 18px 30px rgba(0, 0, 0, 0.4);
+  color: var(--hm-ink);
+}
+.hm-daily-kicker {
+  margin: 0;
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--hm-amber);
+  color: var(--hm-ink);
+  font-size: 12px;
+  font-weight: 900;
+  word-break: keep-all;
+}
+.hm-daily-league {
+  margin: 10px 0 0;
+  font-size: clamp(30px, 6vw, 46px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  word-break: keep-all;
+}
+.hm-daily-rule { margin: 8px 0 0; font-size: 14px; font-weight: 700; color: var(--hm-muted); word-break: keep-all; }
+.hm-daily-facts {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hm-daily-facts:empty { display: none; }
+.hm-daily-facts li {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(11, 16, 38, 0.86);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  word-break: keep-all;
+}
+.hm-daily-facts li.is-accent { background: var(--hm-crimson); }
+
+/* 순위표 */
+.hm-daily-board { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.hm-daily-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 15px;
+  font-weight: 700;
+}
+.hm-daily-rank { text-align: center; font-weight: 900; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, 0.6); }
+.hm-daily-row.is-top .hm-daily-rank { color: var(--hm-amber); }
+.hm-daily-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-daily-name em {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--hm-amber);
+  color: var(--hm-ink);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+.hm-daily-name em:first-child { margin-left: 0; }
+.hm-daily-score { font-variant-numeric: tabular-nums; font-weight: 900; }
+.hm-daily-row.is-me { background: rgba(255, 176, 32, 0.16); outline: 2px solid rgba(255, 176, 32, 0.6); outline-offset: -2px; }
+.hm-daily-row.is-apart { margin-top: 8px; }
+.hm-daily-empty { margin: 0; padding: 18px 8px; text-align: center; font-size: 14px; color: rgba(255, 255, 255, 0.7); word-break: keep-all; }
+
 /* ── 좁은 화면 ──────────────────────────────────────────────────── */
 /* 폰·좁은 창: 제목은 좌상단 로그인 줄 + 공지 칩(두 줄) 아래에서 시작하고,
    버튼은 화면 아래가 아니라 제목 바로 밑에 둔다(아래에 두면 달리는 도둑을 가린다).
@@ -536,6 +675,7 @@
   .hm-star { opacity: var(--hm-star-max, 0.6); }
   .hm-btn,
   .hm-side,
+  .hm-daily-entry,
   .hm-roundbtn,
   .hm-lcard-go,
   .hm-lcard-rank,

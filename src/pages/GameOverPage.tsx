@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import BannerSlot from '../components/BannerSlot';
+import RecordDelta from '../components/RecordDelta';
+import DailyEntry from '../components/daily/DailyEntry';
 import HeistPose from '../components/heist/HeistPose';
 import '../components/heist/heistMenu.css';
 import { SITE_THEME } from '../lib/theme';
@@ -13,6 +15,7 @@ import { heistSfx } from '../lib/heistSfx';
 import { readLastCast } from '../components/game/heist/heistCast';
 import { SOCIAL_PROVIDERS, startSocialLogin, type SocialProvider } from '../lib/socialLogin';
 import { track } from '../lib/track';
+import { recordKey, recordPlay } from '../lib/myRecords';
 import type { RankPreview, ScoreSaveResponse } from '../api/types';
 
 const PENDING_KEY = 'typrun_pending_result';
@@ -29,6 +32,7 @@ interface GameResult {
   play_time_sec: number;
   items_used: number;
   client_hash?: string; // 판 키 — 같은 판을 다시 보내도 서버가 한 번만 저장한다(옛 결과에는 없음)
+  round_sec?: number;   // 이 판의 길이(초) — '내 기록'이 길이가 다른 판끼리 견주지 않게(옛 결과에는 없음)
 }
 
 function isGameResult(v: unknown): v is GameResult {
@@ -62,6 +66,21 @@ export default function GameOverPage() {
   // 뒤집히지 않도록 state 로 고정한다.
   const [result] = useState<GameResult | null>(() =>
     isGameResult(loc.state) ? loc.state : readPendingResult()
+  );
+
+  // 내 기록(이 브라우저) — 지난 판 대비·내 최고. 가입하지 않아도 보인다. 같은 판은 다시 열어도 한 번만 반영된다.
+  // 판 길이를 모르는 옛 결과(배포 전에 로그인하러 갔다 온 판)는 반영하지 않는다 — 길이가 다른 판으로 보여 기록이 새로 시작된다
+  const [record] = useState(() =>
+    result && result.round_sec
+      ? recordPlay(recordKey(result.category_seq), {
+          score: result.score,
+          wpm: result.wpm,
+          accuracy: result.accuracy,
+          roundSec: result.round_sec,
+          key: result.client_hash ?? null,
+          at: new Date().toISOString(),
+        })
+      : null,
   );
 
   const [saving, setSaving] = useState(false);
@@ -161,7 +180,7 @@ export default function GameOverPage() {
           {/* 포즈 그림은 세로가 넉넉할 때만 — 낮은 화면에서는 뒤에서 달리는 도둑을 가리지 않게 뺀다 */}
           {/* 도둑 포즈라 도둑으로 한 판에만 보여 준다(학생·병아리·신부로 한 판은 뒤의 달리는 장면이 그 캐릭터다) */}
           {isHeist && readLastCast() === 'thief' && (
-            <HeistPose key={pose} pose={pose} className="h-24 md:h-28 [@media(max-height:760px)]:hidden" />
+            <HeistPose key={pose} pose={pose} className="h-24 md:h-28 [@media(max-height:860px)]:hidden" />
           )}
           <motion.h2
             initial={{ opacity: 0, y: -8 }}
@@ -180,6 +199,7 @@ export default function GameOverPage() {
             {result.score.toLocaleString()}
           </motion.div>
           <div className="text-white/50 text-xs mt-1">SCORE</div>
+          <RecordDelta summary={record} className="mt-2" />
 
           {/* 연습 리그: 랭킹/저장 없이 격려 메시지만 */}
           {isPractice && (
@@ -280,6 +300,9 @@ export default function GameOverPage() {
           </motion.section>
         )}
       </div>
+
+      {/* 오늘의 도전 — 한 판 하고 나가는 사람에게 내일도 올 이유를 하나 더 보여 준다 */}
+      <DailyEntry onOpen={() => nav('/daily')} />
 
       {/* 배너 — 종료화면(전환 최적 위치). 등록된 배너 없으면 렌더 안 됨 */}
       <BannerSlot slot="gameover" />

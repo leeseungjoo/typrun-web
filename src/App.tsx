@@ -10,6 +10,8 @@ import InviteBattlePage from './pages/InviteBattlePage';
 import GamePage from './pages/GamePage';
 import TapRunnerPage from './pages/TapRunnerPage';
 import GameOverPage from './pages/GameOverPage';
+import DailyPage from './pages/DailyPage';
+import DailyResultPage from './pages/DailyResultPage';
 import TypingTestPage from './pages/TypingTestPage';
 import RacePage from './pages/RacePage';
 import TypingStatsPage from './pages/TypingStatsPage';
@@ -88,6 +90,9 @@ export default function App() {
         <Route path="/game/:categorySeq" element={<GamePage />} />
         <Route path="/tap" element={<TapRunnerPage />} />
         <Route path="/game-over" element={<GameOverPage />} />
+        {/* 오늘의 도전 — 하루 한 리그, 모두 같은 단어로 치는 60초 한 판 */}
+        <Route path="/daily" element={<DailyPage />} />
+        <Route path="/daily/result" element={<DailyResultPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/rankings/:categorySeq" element={<RankingsPage />} />
         <Route path="/insider" element={<ReferralRankPage />} />
